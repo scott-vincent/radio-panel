@@ -101,8 +101,8 @@ void dataLink(simvars* t)
     timeout.tv_sec = 0;
     timeout.tv_usec = 500000;
 
-    // Only want a subset of SimVars for Autopilot panel (to save bandwidth)
-    long dataSize = (long)(&t->simVars.autothrottleActive) + sizeof(t->simVars.autothrottleActive) - (long)&t->simVars;
+    // Only want a subset of SimVars for Radio panel (to save bandwidth)
+    long dataSize = (long)(&t->simVars.transponderCode) + sizeof(t->simVars.transponderCode) - (long)&t->simVars;
     long actualSize;
     int bytes;
 
