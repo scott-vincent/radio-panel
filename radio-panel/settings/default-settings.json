@@ -1,0 +1,45 @@
+{
+  "Data Link": {
+    "Host": "192.168.0.1",
+    "Port": 52020
+  },
+  "GPIO": {
+    "Frequency Whole": {
+      "RotaryEncoder": {
+        "Rot1": 2,
+        "Rot2": 3
+      }
+    },
+    "Frequency Fraction": {
+      "RotaryEncoder": {
+        "Rot1": 17,
+        "Rot2": 27,
+        "Push": 22
+      }
+    },
+    "Swap": {
+      "Button": {
+        "Push": 26
+      }
+    },
+    "Com": {
+      "Button": {
+        "Push": 20,
+        "Led": 21
+      }
+    },
+    "Nav": {
+      "Button": {
+        "Push": 12,
+        "Led": 16
+      }
+    },
+    "Squawk": {
+      "RotaryEncoder": {
+        "Rot1": 23,
+        "Rot2": 24,
+        "Push": 9
+      }
+    }
+  }
+}
