@@ -163,7 +163,7 @@ void radio::gpioFreqWholeInput()
     // Frequency whole rotate
     int val = globals.gpioCtrl->readRotation(freqWholeControl);
     if (val != INT_MIN) {
-        int diff = (val - prevFreqWholeVal) / 2;
+        int diff = (val - prevFreqWholeVal) / 4;
         int adjust = 0;
         if (diff > 0) {
             adjust = 1;
@@ -193,7 +193,7 @@ void radio::gpioFreqFracInput()
     // Frequency fraction rotate
     int val = globals.gpioCtrl->readRotation(freqFracControl);
     if (val != INT_MIN) {
-        int diff = (val - prevFreqFracVal) / 2;
+        int diff = (val - prevFreqFracVal) / 4;
         int adjust = 0;
         if (diff > 0) {
             adjust = 1;
@@ -289,7 +289,7 @@ void radio::gpioSquawkInput()
     // Squawk rotate
     int val = globals.gpioCtrl->readRotation(squawkControl);
     if (val != INT_MIN) {
-        int diff = (val - prevSquawkVal) / 2;
+        int diff = (val - prevSquawkVal) / 4;
         int adjust = 0;
         if (diff > 0) {
             adjust = 1;
@@ -328,6 +328,7 @@ void radio::gpioSquawkInput()
             }
         }
         prevSquawkPush = val;
+        time(&lastSquawkAdjust);
     }
 }
 
@@ -404,6 +405,11 @@ double radio::adjustComFrac(int adjust)
     }
 
     standbyFreq = whole + (frac1 / 10.0) + (frac2 / 1000.0);
+
+    // Need to set .020 to show .025 and .070 to show .075 !!!
+    if (frac2 == 25 || frac2 == 75) {
+        frac2 -= 5;
+    }
 
     // Convert to BCD
     int digit1 = whole / 100;
