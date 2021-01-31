@@ -59,6 +59,13 @@ void radio::render()
     int digit4 = code - digit3 * 16;
     code = digit1 * 1000 + digit2 * 100 + digit3 * 10 + digit4;
     sevenSegment->getSegData(&display3[2], 4, code, 4);
+    sevenSegment->blankSegData(display3, 2, false);
+    sevenSegment->blankSegData(&display3[6], 2, false);
+
+    // If squawk is being adjusted show a dot to indicate which digit
+    if (lastSquawkAdjust != 0) {
+        sevenSegment->decimalSegData(display3, 2 + squawkSetSel);
+    }
 
     // Write to 7-segment displays
     sevenSegment->writeSegData3(display1, display2, display3);
@@ -74,13 +81,15 @@ void radio::render()
 /// </summary>
 void radio::writeCom(unsigned char* display, double freq)
 {
-    int freqX1000 = freq * 1000;
+    int freqX1000 = (freq + 0.0001) * 1000;
     int whole = freqX1000 / 1000;
     int frac = freqX1000 % 1000;
 
+    sevenSegment->blankSegData(display, 1, false);
     sevenSegment->getSegData(&display[1], 3, whole, 3);
     sevenSegment->decimalSegData(display, 3);
     sevenSegment->getSegData(&display[4], 3, frac, 3);
+    sevenSegment->blankSegData(&display[7], 1, false);
 }
 
 /// <summary>
@@ -89,14 +98,15 @@ void radio::writeCom(unsigned char* display, double freq)
 /// </summary>
 void radio::writeNav(unsigned char* display, double freq)
 {
-    int freqX100 = freq * 100;
+    int freqX100 = (freq + 0.001) * 100;
     int whole = freqX100 / 100;
     int frac = freqX100 % 100;
 
+    sevenSegment->blankSegData(display, 1, false);
     sevenSegment->getSegData(&display[1], 3, whole, 3);
     sevenSegment->decimalSegData(display, 3);
     sevenSegment->getSegData(&display[4], 2, frac, 2);
-    sevenSegment->blankSegData(&display[6], 1, false);
+    sevenSegment->blankSegData(&display[6], 2, false);
 }
 
 void radio::update()
@@ -227,6 +237,7 @@ void radio::gpioFreqFracInput()
                 fracSetSel++;
             }
         }
+        prevFreqFracPush = val;
     }
 }
 
@@ -316,6 +327,7 @@ void radio::gpioSquawkInput()
                 squawkSetSel++;
             }
         }
+        prevSquawkPush = val;
     }
 }
 
@@ -330,10 +342,10 @@ double radio::adjustComWhole(int adjust)
     // Adjust whole - Range 118 to 136
     whole += adjust;
     if (whole > 136) {
-        whole -= 19;
+        whole = 118;
     }
     else if (whole < 118) {
-        whole += 19;
+        whole = 136;
     }
 
     standbyFreq = whole + (thousandths / 1000.0);
@@ -362,10 +374,10 @@ double radio::adjustComFrac(int adjust)
         // Adjust 10ths
         frac1 += adjust;
         if (frac1 > 9) {
-            frac1 -= 10;
+            frac1 = 0;
         }
         else if (frac1 < 0) {
-            frac1 += 10;
+            frac1 = 9;
         }
     }
     else {
@@ -373,30 +385,25 @@ double radio::adjustComFrac(int adjust)
         frac2 += adjust * 5;
 
         if (frac2 >= 100) {
-            frac2 -= 100;
+            frac2 = 0;
         }
         else if (frac2 < 0) {
-            frac2 += 100;
+            frac2 = 90;
         }
 
         // Skip .020, .045, .070 and .095
         if (frac2 == 95) {
             frac2 += adjust * 5;
             if (frac2 >= 100) {
-                frac2 -= 100;
+                frac2 = 0;
             }
         }
         else if (frac2 == 20 || frac2 == 45 || frac2 == 70) {
             frac2 += adjust * 5;
         }
-
-        // .020 shows as .025 and .070 shows as .075
-        if (frac2 == 25 || frac2 == 75) {
-            frac2 -= 5;
-        }
     }
 
-    standbyFreq = whole + (thousandths / 1000.0);
+    standbyFreq = whole + (frac1 / 10.0) + (frac2 / 1000.0);
 
     // Convert to BCD
     int digit1 = whole / 100;
@@ -419,10 +426,10 @@ double radio::adjustNavWhole(int adjust)
     // Adjust whole - Range 108 to 117
     whole += adjust;
     if (whole > 117) {
-        whole -= 10;
+        whole = 108;
     }
     else if (whole < 108) {
-        whole += 10;
+        whole = 117;
     }
 
     standbyFreq = whole + (frac / 100.0);
@@ -447,10 +454,10 @@ double radio::adjustNavFrac(int adjust)
     frac += adjust * 5;
 
     if (frac >= 100) {
-        frac -= 100;
+        frac = 0;
     }
     else if (frac < 0) {
-        frac += 100;
+        frac = 95;
     }
 
     standbyFreq = whole + (frac / 100.0);
@@ -500,10 +507,10 @@ int radio::adjustSquawkDigit(int val, int adjust)
 {
     val += adjust;
     if (val > 7) {
-        val -= 8;
+        val = 0;
     }
     else if (val < 0) {
-        val += 8;
+        val = 7;
     }
 
     return val;
