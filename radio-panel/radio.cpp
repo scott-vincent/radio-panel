@@ -265,6 +265,8 @@ void radio::gpioButtonsInput()
         if (prevComPush % 2 == 1) {
             // Show Com1
             showNav = false;
+            globals.gpioCtrl->writeLed(comControl, !showNav);
+            globals.gpioCtrl->writeLed(navControl, showNav);
         }
         fracSetSel = 0;
         lastFreqAdjust = 0;
@@ -277,6 +279,8 @@ void radio::gpioButtonsInput()
         if (prevNavPush % 2 == 1) {
             // Show Nav1
             showNav = true;
+            globals.gpioCtrl->writeLed(comControl, !showNav);
+            globals.gpioCtrl->writeLed(navControl, showNav);
         }
         fracSetSel = 0;
         lastFreqAdjust = 0;
