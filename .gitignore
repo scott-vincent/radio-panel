@@ -1,0 +1,9 @@
+.git
+.vs
+packages
+**/debug
+**/Debug
+**/release
+**/Release
+**/~AutoRecover*
+radio-panel/radio-panel

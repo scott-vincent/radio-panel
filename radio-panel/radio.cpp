@@ -47,6 +47,9 @@ void radio::render()
     }
     else {
         writeCom(display2, standbyFreq);
+        if (lastFreqAdjust != 0 && fracSetSel == 1) {
+            sevenSegment->decimalSegData(display2, 6);
+        }
     }
 
     // Transponder code is in BCO16
@@ -122,6 +125,7 @@ void radio::update()
         showNav = false;
     }
 
+    time(&now);
     gpioFreqWholeInput();
     gpioFreqFracInput();
     gpioButtonsInput();
@@ -184,6 +188,7 @@ void radio::gpioFreqWholeInput()
             }
             prevFreqWholeVal = val;
         }
+        fracSetSel = 0;
         time(&lastFreqAdjust);      // Gets reset by frac input
     }
 }
@@ -218,7 +223,6 @@ void radio::gpioFreqFracInput()
     }
     else if (lastFreqAdjust != 0) {
         // Reset digit set selection if more than 2 seconds since last adjustment
-        time(&now);
         if (now - lastFreqAdjust > 2) {
             fracSetSel = 0;
             lastFreqAdjust = 0;
@@ -234,10 +238,11 @@ void radio::gpioFreqFracInput()
                 fracSetSel = 0;
             }
             else {
-                fracSetSel++;
+                fracSetSel = 1;
             }
         }
         prevFreqFracPush = val;
+        time(&lastFreqAdjust);
     }
 }
 
@@ -312,7 +317,6 @@ void radio::gpioSquawkInput()
     }
     else if (lastSquawkAdjust != 0) {
         // Reset digit set selection if more than 2 seconds since last adjustment
-        time(&now);
         if (now - lastSquawkAdjust > 2) {
             squawkSetSel = 0;
             lastSquawkAdjust = 0;
@@ -324,7 +328,7 @@ void radio::gpioSquawkInput()
     if (val != INT_MIN) {
         if (prevSquawkPush % 2 == 1) {
             // Short press switches to next digit
-            if (squawkSetSel == 3) {
+            if (lastSquawkAdjust == 0 || squawkSetSel == 3) {
                 squawkSetSel = 0;
             }
             else {
