@@ -14,14 +14,19 @@ radio::radio()
     fflush(stdout);
 }
 
+void radio::blankDisplays()
+{
+    sevenSegment->blankSegData(display1, 8, false);
+    sevenSegment->blankSegData(display2, 8, false);
+    sevenSegment->blankSegData(display3, 8, false);
+    sevenSegment->writeSegData3(display1, display2, display3);
+}
+
 void radio::render()
 {
     if (!globals.electrics) {
         // Turn off 7-segment displays
-        sevenSegment->blankSegData(display1, 8, false);
-        sevenSegment->blankSegData(display2, 8, false);
-        sevenSegment->blankSegData(display3, 8, false);
-        sevenSegment->writeSegData3(display1, display2, display3);
+        blankDisplays();
 
         // Turn off LEDS
         globals.gpioCtrl->writeLed(comControl, false);
@@ -123,6 +128,7 @@ void radio::update()
         setFreqFrac = 0;
         setSquawk = 0;
         showNav = false;
+        pressAndHoldCom = false;
     }
 
     time(&now);
@@ -272,6 +278,10 @@ void radio::gpioButtonsInput()
             showNav = false;
             globals.gpioCtrl->writeLed(comControl, !showNav);
             globals.gpioCtrl->writeLed(navControl, showNav);
+            pressAndHoldCom = true;
+        }
+        else {
+            pressAndHoldCom = false;
         }
         fracSetSel = 0;
         lastFreqAdjust = 0;
@@ -286,6 +296,14 @@ void radio::gpioButtonsInput()
             showNav = true;
             globals.gpioCtrl->writeLed(comControl, !showNav);
             globals.gpioCtrl->writeLed(navControl, showNav);
+
+            // If Com and Nav are pressed at the same time exit
+            // radio panel and let it auto-restart (full reset).
+            if (pressAndHoldCom) {
+                printf("Hard reset\n");
+                blankDisplays();
+                exit(1);
+            }
         }
         fracSetSel = 0;
         lastFreqAdjust = 0;

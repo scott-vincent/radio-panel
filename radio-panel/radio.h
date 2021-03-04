@@ -39,6 +39,7 @@ private:
     int prevSquawkVal = 0;
     int prevSquawkPush = 0;
     int squawkSetSel = 0;
+    bool pressAndHoldCom = false;
 
     time_t lastFreqAdjust = 0;
     time_t lastSquawkAdjust = 0;
@@ -50,6 +51,7 @@ public:
     void update();
 
 private:
+    void blankDisplays();
     void writeCom(unsigned char* display, double freq);
     void writeNav(unsigned char* display, double freq);
     void addGpio();
