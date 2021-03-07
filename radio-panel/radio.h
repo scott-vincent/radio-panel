@@ -39,7 +39,6 @@ private:
     int prevSquawkVal = 0;
     int prevSquawkPush = 0;
     int squawkSetSel = 0;
-    bool pressAndHoldCom = false;
 
     time_t lastFreqAdjust = 0;
     time_t lastSquawkAdjust = 0;

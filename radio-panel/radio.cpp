@@ -128,7 +128,6 @@ void radio::update()
         setFreqFrac = 0;
         setSquawk = 0;
         showNav = false;
-        pressAndHoldCom = false;
     }
 
     time(&now);
@@ -278,10 +277,6 @@ void radio::gpioButtonsInput()
             showNav = false;
             globals.gpioCtrl->writeLed(comControl, !showNav);
             globals.gpioCtrl->writeLed(navControl, showNav);
-            pressAndHoldCom = true;
-        }
-        else {
-            pressAndHoldCom = false;
         }
         fracSetSel = 0;
         lastFreqAdjust = 0;
@@ -297,9 +292,9 @@ void radio::gpioButtonsInput()
             globals.gpioCtrl->writeLed(comControl, !showNav);
             globals.gpioCtrl->writeLed(navControl, showNav);
 
-            // If Com and Nav are pressed at the same time exit
-            // radio panel and let it auto-restart (full reset).
-            if (pressAndHoldCom) {
+            // If Com is also being pressed exit radio panel
+            // and let it auto-restart (full reset).
+            if (prevComPush % 2 == 0) {
                 printf("Hard reset\n");
                 blankDisplays();
                 exit(1);
