@@ -135,6 +135,7 @@ void radio::update()
     gpioFreqFracInput();
     gpioButtonsInput();
     gpioSquawkInput();
+    gpioTrimWheelInput();
 
     // Only update local values from sim if they are not currently being
     // adjusted by the rotary encoders. This stops the displayed values
@@ -165,6 +166,7 @@ void radio::addGpio()
     comControl = globals.gpioCtrl->addButton("Com");
     navControl = globals.gpioCtrl->addButton("Nav");
     squawkControl = globals.gpioCtrl->addRotaryEncoder("Squawk");
+    trimWheelControl = globals.gpioCtrl->addRotaryEncoder("Trim Wheel");
 }
 
 void radio::gpioFreqWholeInput()
@@ -350,6 +352,28 @@ void radio::gpioSquawkInput()
         }
         prevSquawkPush = val;
         time(&lastSquawkAdjust);
+    }
+}
+
+void radio::gpioTrimWheelInput()
+{
+    // Trim wheel rotate
+    int val = globals.gpioCtrl->readRotation(trimWheelControl);
+    if (val != INT_MIN) {
+        int adjust = val - prevTrimWheelVal;
+
+        // Adjust elevator trim
+        while (adjust != 0) {
+            if (adjust > 0) {
+                globals.simVars->write(KEY_ELEV_TRIM_UP);
+                adjust--;
+            }
+            else {
+                globals.simVars->write(KEY_ELEV_TRIM_DN);
+                adjust++;
+            }
+        }
+        prevTrimWheelVal = val;
     }
 }
 

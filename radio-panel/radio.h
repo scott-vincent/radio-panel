@@ -28,6 +28,7 @@ private:
     int comControl = -1;
     int navControl = -1;
     int squawkControl = -1;
+    int trimWheelControl = -1;
 
     int prevFreqWholeVal = 0;
     int prevFreqFracVal = 0;
@@ -39,6 +40,7 @@ private:
     int prevSquawkVal = 0;
     int prevSquawkPush = 0;
     int squawkSetSel = 0;
+    int prevTrimWheelVal = 0;
 
     time_t lastFreqAdjust = 0;
     time_t lastSquawkAdjust = 0;
@@ -58,6 +60,7 @@ private:
     void gpioFreqFracInput();
     void gpioButtonsInput();
     void gpioSquawkInput();
+    void gpioTrimWheelInput();
     double adjustComWhole(int adjust);
     double adjustComFrac(int adjust);
     double adjustNavWhole(int adjust);

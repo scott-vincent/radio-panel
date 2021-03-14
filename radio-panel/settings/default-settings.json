@@ -40,6 +40,12 @@
         "Rot2": 24,
         "Push": 9
       }
+    },
+    "Trim Wheel": {
+      "RotaryEncoder": {
+        "Rot1": 15,
+        "Rot2": 18
+      }
     }
   }
 }
