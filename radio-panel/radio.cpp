@@ -404,7 +404,7 @@ void radio::gpioSpoilersInput()
         prevSpoilersAutoToggle = val;
         if (val == 1) {
             // Switch pressed
-            globals.simVars->write(KEY_FLAPS_UP);
+            globals.simVars->write(KEY_SPOILERS_ARM_SET, 1);
             lastSpoilersPos = 0;
             if (spoilersVal != INT_MIN) {
                 spoilersAutoVal = spoilersVal;  // Re-calibrate spoilers values
@@ -424,7 +424,7 @@ void radio::gpioSpoilersInput()
         prevSpoilersDownToggle = val;
         if (val == 1) {
             // Switch pressed
-            globals.simVars->write(KEY_FLAPS_DOWN);
+            globals.simVars->write(KEY_SPOILERS_ON);
             lastSpoilersPos = 3;
             if (spoilersVal != INT_MIN) {
                 spoilersDownVal = spoilersVal;    // Re-calibrate spoilers values
@@ -445,8 +445,14 @@ void radio::gpioSpoilersInput()
             lastSpoilersPos = spoilersPos;
             // Set spoilers to retracted or half
             switch (spoilersPos) {
-            case 1: globals.simVars->write(KEY_SPOILERS_SET, 0); break;
-            case 2: globals.simVars->write(KEY_SPOILERS_SET, 8192); break;
+            case 1:
+                //globals.simVars->write(KEY_SPOILERS_ARM_SET, 0);
+                globals.simVars->write(KEY_SPOILERS_OFF);
+                break;
+            case 2:
+                globals.simVars->write(KEY_SPOILERS_ARM_SET, 0);
+                globals.simVars->write(KEY_SPOILERS_SET, 8192);
+                break;
             }
         }
     }
