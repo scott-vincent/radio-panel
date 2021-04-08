@@ -128,11 +128,12 @@ void radio::update()
         setFreqFrac = 0;
         setSquawk = 0;
         showNav = false;
-        prevFlapsUpToggle = -1;
-        prevFlapsDownToggle = -1;
+        spoilerPos = 1;
+        prevSpoilerAutoToggle = -1;
+        prevSpoilerDownToggle = -1;
         prevGearUpToggle = -1;
         prevGearDownToggle = -1;
-        lastFlapsAdjust = 0;
+        lastSpoilerAdjust = 0;
     }
 
     time(&now);
@@ -141,7 +142,7 @@ void radio::update()
     gpioButtonsInput();
     gpioSquawkInput();
     gpioTrimWheelInput();
-    gpioFlapsInput();
+    gpioSpoilerInput();
     gpioGearInput();
 
     // Only update local values from sim if they are not currently being
@@ -174,9 +175,9 @@ void radio::addGpio()
     navControl = globals.gpioCtrl->addButton("Nav");
     squawkControl = globals.gpioCtrl->addRotaryEncoder("Squawk");
     trimWheelControl = globals.gpioCtrl->addRotaryEncoder("Trim Wheel");
-    flapsUpControl = globals.gpioCtrl->addSwitch("Flaps Up");
-    flapsMidControl = globals.gpioCtrl->addRotaryEncoder("Flaps Mid");
-    flapsDownControl = globals.gpioCtrl->addSwitch("Flaps Down");
+    spoilerAutoControl = globals.gpioCtrl->addSwitch("Spoiler Auto");
+    spoilerSetControl = globals.gpioCtrl->addRotaryEncoder("Spoiler Set");
+    spoilerDownControl = globals.gpioCtrl->addSwitch("Spoiler Down");
     gearUpControl = globals.gpioCtrl->addSwitch("Gear Up");
     gearDownControl = globals.gpioCtrl->addSwitch("Gear Down");
 }
@@ -389,59 +390,74 @@ void radio::gpioTrimWheelInput()
     }
 }
 
-void radio::gpioFlapsInput()
+void radio::gpioSpoilerInput()
 {
-    // Flaps up toggle
-    int val = globals.gpioCtrl->readToggle(flapsUpControl);
-    if (val != INT_MIN && val != prevFlapsUpToggle) {
+    // Spoiler auto toggle
+    int val = globals.gpioCtrl->readToggle(spoilerAutoControl);
+    if (val != INT_MIN && val != prevSpoilerAutoToggle) {
         // Switch toggled
         if (val == 1) {
             // Switch pressed
-            globals.simVars->write(KEY_FLAPS_UP);
-            prevFlapsUpToggle = val;
+            globals.simVars->write(KEY_SPOILERS_ARM_SET, 1);
+            spoilerPos = 0;
+            prevSpoilerAutoToggle = val;
             return;
         }
-        prevFlapsUpToggle = val;
+        prevSpoilerAutoToggle = val;
     }
 
-    // Flaps down toggle
-    val = globals.gpioCtrl->readToggle(flapsDownControl);
-    if (val != INT_MIN && val != prevFlapsDownToggle) {
+    // Spoiler down toggle
+    val = globals.gpioCtrl->readToggle(spoilerDownControl);
+    if (val != INT_MIN && val != prevSpoilerDownToggle) {
         // Switch toggled
         if (val == 1) {
             // Switch pressed
-            globals.simVars->write(KEY_FLAPS_DOWN);
-            prevFlapsDownToggle = val;
+            globals.simVars->write(KEY_SPOILERS_ON);
+            spoilerPos = 3;
+            prevSpoilerDownToggle = val;
             return;
         }
-        prevFlapsDownToggle = val;
+        prevSpoilerDownToggle = val;
     }
 
-    // Flaps rotate
-    val = globals.gpioCtrl->readRotation(flapsMidControl);
+    // Spoiler rotate
+    val = globals.gpioCtrl->readRotation(spoilerSetControl);
     if (val != INT_MIN) {
         // Ignore lever movement until reset
-        if (lastFlapsAdjust != 0) {
-            prevFlapsMidVal = val;
+        if (lastSpoilerAdjust != 0) {
+            prevSpoilerSetVal = val;
         }
         else {
-            int diff = val - prevFlapsMidVal;
+            int newSpoilerPos = spoilerPos;
+            int diff = val - prevSpoilerSetVal;
             if (diff > 1) {
-                // Next flaps position
-                globals.simVars->write(KEY_FLAPS_INCR);
-                time(&lastFlapsAdjust);
+                // Next spoiler position
+                newSpoilerPos++;
             }
             else if (diff < -1) {
-                // Prev flaps position
-                globals.simVars->write(KEY_FLAPS_DECR);
-                time(&lastFlapsAdjust);
+                // Prev spoiler position
+                newSpoilerPos--;
+            }
+            if (spoilerPos != newSpoilerPos) {
+                spoilerPos = newSpoilerPos;
+                if (spoilerPos == 1) {
+                    // Spoilers retracted
+                    globals.simVars->write(KEY_SPOILERS_ARM_SET, 0);
+                    globals.simVars->write(KEY_SPOILERS_SET, 0);
+                }
+                else if (spoilerPos == 2) {
+                    // Half spoilers
+                    globals.simVars->write(KEY_SPOILERS_ARM_SET, 0);
+                    globals.simVars->write(KEY_SPOILERS_SET, 8192);
+                }
+                time(&lastSpoilerAdjust);
             }
         }
     }
-    else if (lastFlapsAdjust != 0) {
-        if (now - lastFlapsAdjust > 0) {
+    else if (lastSpoilerAdjust != 0) {
+        if (now - lastSpoilerAdjust > 0) {
             // Reset if some time elapsed since last lever movement
-            lastFlapsAdjust = 0;
+            lastSpoilerAdjust = 0;
         }
     }
 }

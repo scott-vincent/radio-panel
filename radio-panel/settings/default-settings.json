@@ -47,18 +47,18 @@
         "Rot2": 18
       }
     },
-    "Flaps Up": {
+    "Spoiler Auto": {
       "Switch": {
         "Toggle": 6
       }
     },
-    "Flaps Mid": {
+    "Spoiler Set": {
       "RotaryEncoder": {
         "Rot1": 5,
         "Rot2": 25
       }
     },
-    "Flaps Down": {
+    "Spoiler Down": {
       "Switch": {
         "Toggle": 7
       }
