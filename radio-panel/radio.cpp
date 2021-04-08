@@ -128,12 +128,11 @@ void radio::update()
         setFreqFrac = 0;
         setSquawk = 0;
         showNav = false;
-        spoilerPos = 1;
-        prevSpoilerAutoToggle = -1;
-        prevSpoilerDownToggle = -1;
+        lastSpoilersPos = -1;
+        prevSpoilersAutoToggle = -1;
+        prevSpoilersDownToggle = -1;
         prevGearUpToggle = -1;
         prevGearDownToggle = -1;
-        lastSpoilerAdjust = 0;
     }
 
     time(&now);
@@ -142,7 +141,7 @@ void radio::update()
     gpioButtonsInput();
     gpioSquawkInput();
     gpioTrimWheelInput();
-    gpioSpoilerInput();
+    gpioSpoilersInput();
     gpioGearInput();
 
     // Only update local values from sim if they are not currently being
@@ -175,9 +174,9 @@ void radio::addGpio()
     navControl = globals.gpioCtrl->addButton("Nav");
     squawkControl = globals.gpioCtrl->addRotaryEncoder("Squawk");
     trimWheelControl = globals.gpioCtrl->addRotaryEncoder("Trim Wheel");
-    spoilerAutoControl = globals.gpioCtrl->addSwitch("Spoiler Auto");
-    spoilerSetControl = globals.gpioCtrl->addRotaryEncoder("Spoiler Set");
-    spoilerDownControl = globals.gpioCtrl->addSwitch("Spoiler Down");
+    spoilersAutoControl = globals.gpioCtrl->addSwitch("Spoilers Auto");
+    spoilersPosControl = globals.gpioCtrl->addRotaryEncoder("Spoilers Pos");
+    spoilersDownControl = globals.gpioCtrl->addSwitch("Spoilers Down");
     gearUpControl = globals.gpioCtrl->addSwitch("Gear Up");
     gearDownControl = globals.gpioCtrl->addSwitch("Gear Down");
 }
@@ -390,74 +389,65 @@ void radio::gpioTrimWheelInput()
     }
 }
 
-void radio::gpioSpoilerInput()
+void radio::gpioSpoilersInput()
 {
-    // Spoiler auto toggle
-    int val = globals.gpioCtrl->readToggle(spoilerAutoControl);
-    if (val != INT_MIN && val != prevSpoilerAutoToggle) {
-        // Switch toggled
-        if (val == 1) {
-            // Switch pressed
-            globals.simVars->write(KEY_SPOILERS_ARM_SET, 1);
-            spoilerPos = 0;
-            prevSpoilerAutoToggle = val;
-            return;
-        }
-        prevSpoilerAutoToggle = val;
-    }
-
-    // Spoiler down toggle
-    val = globals.gpioCtrl->readToggle(spoilerDownControl);
-    if (val != INT_MIN && val != prevSpoilerDownToggle) {
-        // Switch toggled
-        if (val == 1) {
-            // Switch pressed
-            globals.simVars->write(KEY_SPOILERS_ON);
-            spoilerPos = 3;
-            prevSpoilerDownToggle = val;
-            return;
-        }
-        prevSpoilerDownToggle = val;
-    }
-
-    // Spoiler rotate
-    val = globals.gpioCtrl->readRotation(spoilerSetControl);
+    // Spoilers rotate
+    int val = globals.gpioCtrl->readRotation(spoilersPosControl);
     if (val != INT_MIN) {
-        // Ignore lever movement until reset
-        if (lastSpoilerAdjust != 0) {
-            prevSpoilerSetVal = val;
-        }
-        else {
-            int newSpoilerPos = spoilerPos;
-            int diff = val - prevSpoilerSetVal;
-            if (diff > 1) {
-                // Next spoiler position
-                newSpoilerPos++;
-            }
-            else if (diff < -1) {
-                // Prev spoiler position
-                newSpoilerPos--;
-            }
-            if (spoilerPos != newSpoilerPos) {
-                spoilerPos = newSpoilerPos;
-                if (spoilerPos == 1) {
-                    // Spoilers retracted
-                    globals.simVars->write(KEY_SPOILERS_ARM_SET, 0);
-                    globals.simVars->write(KEY_SPOILERS_SET, 0);
+        spoilersVal = val;
+    }
+
+    // Spoilers auto toggle
+    val = globals.gpioCtrl->readToggle(spoilersAutoControl);
+    if (val != INT_MIN && val != prevSpoilersAutoToggle) {
+        // Switch toggled
+        prevSpoilersAutoToggle = val;
+        if (val == 1) {
+            // Switch pressed
+            globals.simVars->write(KEY_FLAPS_UP);
+            lastSpoilersPos = 0;
+            if (spoilersVal != INT_MIN) {
+                spoilersAutoVal = spoilersVal;  // Re-calibrate spoilers values
+                int diff = spoilersDownVal - spoilersAutoVal;
+                if (diff < 17 || diff > 23) {
+                    spoilersDownVal = spoilersAutoVal + 20;
                 }
-                else if (spoilerPos == 2) {
-                    // Half spoilers
-                    globals.simVars->write(KEY_SPOILERS_ARM_SET, 0);
-                    globals.simVars->write(KEY_SPOILERS_SET, 8192);
-                }
-                time(&lastSpoilerAdjust);
             }
+            return;
         }
     }
-    else if (lastSpoilerAdjust != 0) {
-        if (now - lastSpoilerAdjust > 0) {
-            // Reset if some time elapsed since last lever movement
-            lastSpoilerAdjust = 0;
+
+    // Spoilers down toggle
+    val = globals.gpioCtrl->readToggle(spoilersDownControl);
+    if (val != INT_MIN && val != prevSpoilersDownToggle) {
+        // Switch toggled
+        prevSpoilersDownToggle = val;
+        if (val == 1) {
+            // Switch pressed
+            globals.simVars->write(KEY_FLAPS_DOWN);
+            lastSpoilersPos = 3;
+            if (spoilersVal != INT_MIN) {
+                spoilersDownVal = spoilersVal;    // Re-calibrate spoilers values
+                int diff = spoilersDownVal - spoilersAutoVal;
+                if (diff < 17 || diff > 23) {
+                    spoilersAutoVal = spoilersDownVal - 20;
+                }
+            }
+            return;
+        }
+    }
+
+    if (spoilersVal != INT_MIN) {
+        // Check for new spoilers position
+        double onePos = (spoilersDownVal - spoilersAutoVal) / 3.0;
+        int spoilersPos = (spoilersVal + (onePos / 2.0) - spoilersAutoVal) / onePos;
+        if (spoilersPos != lastSpoilersPos) {
+            lastSpoilersPos = spoilersPos;
+            // Set spoilers to retracted or half
+            switch (spoilersPos) {
+            case 1: globals.simVars->write(KEY_SPOILERS_SET, 0); break;
+            case 2: globals.simVars->write(KEY_SPOILERS_SET, 8192); break;
+            }
         }
     }
 }

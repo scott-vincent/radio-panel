@@ -47,18 +47,18 @@
         "Rot2": 18
       }
     },
-    "Spoiler Auto": {
+    "Spoilers Auto": {
       "Switch": {
         "Toggle": 6
       }
     },
-    "Spoiler Set": {
+    "Spoilers Pos": {
       "RotaryEncoder": {
         "Rot1": 5,
         "Rot2": 25
       }
     },
-    "Spoiler Down": {
+    "Spoilers Down": {
       "Switch": {
         "Toggle": 7
       }

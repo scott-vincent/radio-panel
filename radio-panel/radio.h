@@ -20,7 +20,10 @@ private:
     double setFreqFrac = 0;
     double setSquawk = 0;
     bool showNav = false;
-    int spoilerPos = 1;     // 0 = auto, 1 = retracted, 2 = half, 3 = full
+    int spoilersVal = INT_MIN;
+    int spoilersAutoVal = -6;       // Default to spoilers = retracted
+    int spoilersDownVal = 14;
+    int lastSpoilersPos = -1;       // 0 = auto, 1 = retracted, 2 = half, 3 = full
 
     // Hardware controls
     int freqWholeControl = -1;
@@ -30,9 +33,9 @@ private:
     int navControl = -1;
     int squawkControl = -1;
     int trimWheelControl = -1;
-    int spoilerAutoControl = -1;
-    int spoilerSetControl = -1;
-    int spoilerDownControl = -1;
+    int spoilersAutoControl = -1;
+    int spoilersPosControl = -1;
+    int spoilersDownControl = -1;
     int gearUpControl = -1;
     int gearDownControl = -1;
 
@@ -47,15 +50,13 @@ private:
     int prevSquawkPush = 0;
     int squawkSetSel = 0;
     int prevTrimWheelVal = 0;
-    int prevSpoilerAutoToggle = -1;
-    int prevSpoilerSetVal = 0;
-    int prevSpoilerDownToggle = -1;
+    int prevSpoilersAutoToggle = -1;
+    int prevSpoilersDownToggle = -1;
     int prevGearUpToggle = -1;
     int prevGearDownToggle = -1;
 
     time_t lastFreqAdjust = 0;
     time_t lastSquawkAdjust = 0;
-    time_t lastSpoilerAdjust = 0;
     time_t now;
 
 public:
@@ -73,7 +74,7 @@ private:
     void gpioButtonsInput();
     void gpioSquawkInput();
     void gpioTrimWheelInput();
-    void gpioSpoilerInput();
+    void gpioSpoilersInput();
     void gpioGearInput();
     double adjustComWhole(int adjust);
     double adjustComFrac(int adjust);
