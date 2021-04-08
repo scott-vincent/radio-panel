@@ -120,7 +120,7 @@ void radio::writeNav(unsigned char* display, double freq)
 void radio::update()
 {
     // Check for aircraft change
-    bool aircraftChanged = (loadedAircraft != globals.aircraft);
+    bool aircraftChanged = (globals.electrics && loadedAircraft != globals.aircraft);
     if (aircraftChanged) {
         loadedAircraft = globals.aircraft;
         lastFreqAdjust = 0;
@@ -128,6 +128,11 @@ void radio::update()
         setFreqFrac = 0;
         setSquawk = 0;
         showNav = false;
+        prevFlapsUpToggle = -1;
+        prevFlapsDownToggle = -1;
+        prevGearUpToggle = -1;
+        prevGearDownToggle = -1;
+        lastFlapsAdjust = 0;
     }
 
     time(&now);
@@ -136,6 +141,8 @@ void radio::update()
     gpioButtonsInput();
     gpioSquawkInput();
     gpioTrimWheelInput();
+    gpioFlapsInput();
+    gpioGearInput();
 
     // Only update local values from sim if they are not currently being
     // adjusted by the rotary encoders. This stops the displayed values
@@ -167,6 +174,11 @@ void radio::addGpio()
     navControl = globals.gpioCtrl->addButton("Nav");
     squawkControl = globals.gpioCtrl->addRotaryEncoder("Squawk");
     trimWheelControl = globals.gpioCtrl->addRotaryEncoder("Trim Wheel");
+    flapsUpControl = globals.gpioCtrl->addSwitch("Flaps Up");
+    flapsMidControl = globals.gpioCtrl->addRotaryEncoder("Flaps Mid");
+    flapsDownControl = globals.gpioCtrl->addSwitch("Flaps Down");
+    gearUpControl = globals.gpioCtrl->addSwitch("Gear Up");
+    gearDownControl = globals.gpioCtrl->addSwitch("Gear Down");
 }
 
 void radio::gpioFreqWholeInput()
@@ -374,6 +386,88 @@ void radio::gpioTrimWheelInput()
             }
         }
         prevTrimWheelVal = val;
+    }
+}
+
+void radio::gpioFlapsInput()
+{
+    // Flaps up toggle
+    int val = globals.gpioCtrl->readToggle(flapsUpControl);
+    if (val != INT_MIN && val != prevFlapsUpToggle) {
+        // Switch toggled
+        if (val == 1) {
+            // Switch pressed
+            globals.simVars->write(KEY_FLAPS_UP);
+            prevFlapsUpToggle = val;
+            return;
+        }
+        prevFlapsUpToggle = val;
+    }
+
+    // Flaps down toggle
+    val = globals.gpioCtrl->readToggle(flapsDownControl);
+    if (val != INT_MIN && val != prevFlapsDownToggle) {
+        // Switch toggled
+        if (val == 1) {
+            // Switch pressed
+            globals.simVars->write(KEY_FLAPS_DOWN);
+            prevFlapsDownToggle = val;
+            return;
+        }
+        prevFlapsDownToggle = val;
+    }
+
+    // Flaps rotate
+    val = globals.gpioCtrl->readRotation(flapsMidControl);
+    if (val != INT_MIN) {
+        // Ignore lever movement until reset
+        if (lastFlapsAdjust != 0) {
+            prevFlapsMidVal = val;
+        }
+        else {
+            int diff = val - prevFlapsMidVal;
+            if (diff > 1) {
+                // Next flaps position
+                globals.simVars->write(KEY_FLAPS_INCR);
+                time(&lastFlapsAdjust);
+            }
+            else if (diff < -1) {
+                // Prev flaps position
+                globals.simVars->write(KEY_FLAPS_DECR);
+                time(&lastFlapsAdjust);
+            }
+        }
+    }
+    else if (lastFlapsAdjust != 0) {
+        if (now - lastFlapsAdjust > 0) {
+            // Reset if some time elapsed since last lever movement
+            lastFlapsAdjust = 0;
+        }
+    }
+}
+
+void radio::gpioGearInput()
+{
+    // Gear up toggle
+    int val = globals.gpioCtrl->readToggle(gearUpControl);
+    if (val != INT_MIN && val != prevGearUpToggle) {
+        // Switch toggled
+        if (val == 1) {
+            // Switch pressed
+            globals.simVars->write(KEY_GEAR_SET, 0);
+        }
+        prevGearUpToggle = val;
+    }
+
+    // Gear down toggle
+    val = globals.gpioCtrl->readToggle(gearDownControl);
+    if (val != INT_MIN && val != prevGearDownToggle) {
+        // Switch toggled
+        if (val == 1) {
+            // Switch pressed
+            globals.simVars->write(KEY_GEAR_SET, 1);
+        }
+        prevGearDownToggle = val;
     }
 }
 

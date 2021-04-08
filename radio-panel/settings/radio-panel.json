@@ -46,6 +46,32 @@
         "Rot1": 15,
         "Rot2": 18
       }
+    },
+    "Flaps Up": {
+      "Switch": {
+        "Toggle": 6
+      }
+    },
+    "Flaps Mid": {
+      "RotaryEncoder": {
+        "Rot1": 5,
+        "Rot2": 25
+      }
+    },
+    "Flaps Down": {
+      "Switch": {
+        "Toggle": 7
+      }
+    },
+    "Gear Up": {
+      "Switch": {
+        "Toggle": 19
+      }
+    },
+    "Gear Down": {
+      "Switch": {
+        "Toggle": 13
+      }
     }
   }
 }

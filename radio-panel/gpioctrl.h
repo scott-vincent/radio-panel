@@ -46,6 +46,7 @@ public:
     int addLamp(const char* controlName);
     int readRotation(int control);
     int readPush(int control);
+    int readToggle(int control);
     void writeLed(int control, bool on);
 
 private:

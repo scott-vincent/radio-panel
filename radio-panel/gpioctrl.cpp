@@ -66,7 +66,7 @@ int gpioctrl::addControl()
 
     rotateValue[num] = 0;
     pushValue[num] = 0;
-    toggleValue[num] = 0;
+    toggleValue[num] = 1;   // Default to high (off)
     lastRotateValue[num] = -1;
     lastPushValue[num] = -1;
     lastRotateState[num] = -1;
@@ -100,7 +100,7 @@ void gpioctrl::validateControl(const char* controlName, int control)
     if (gpio[control][Rot1] == INT_MIN && gpio[control][Rot2] == INT_MIN
         && gpio[control][Push] == INT_MIN && gpio[control][Toggle] == INT_MIN
         && gpio[control][Led] == INT_MIN) {
-        printf("Cannot add %s control as no settings specified\n", controlName);
+        printf("Cannot add %s control as no settings specified (or wrong control type specified in addGpio method)\n", controlName);
         exit(1);
     }
 
@@ -318,6 +318,27 @@ int gpioctrl::readPush(int control)
             newVal = pushValue[control];
             lastPushValue[control] = newVal;
         }
+    }
+    else {
+        // Start monitoring controls on first read
+        watcherThread = new std::thread(watcher, this);
+    }
+
+    return newVal;
+}
+
+int gpioctrl::readToggle(int control)
+{
+    // Disabled if no GPIO specified in settings file
+    if (gpio[control][Toggle] == INT_MIN) {
+        return INT_MIN;
+    }
+
+    int newVal = INT_MIN;
+
+    if (watcherThread) {
+        // Toggles are active low so invert input
+        newVal = 1 - toggleValue[control];
     }
     else {
         // Start monitoring controls on first read
