@@ -68,9 +68,28 @@ sevensegment::sevensegment(bool initWiringPi, int spiChannel)
 }
 
 /// <summary>
-// Converts a number to segment display data.
-// Leading zeroes are added up to fixedDigits size.
-// Minus sign added if number negative and bufSize > fixedDigits.
+/// Dim or undim display 1, 2 or 3.
+/// 
+/// </summary>
+void sevensegment::dimDisplay(int displayNum, bool dim)
+{
+    char hex[256];
+
+    if (dim) {
+        strcpy(hex, "0a00");
+    }
+    else {
+        strcpy(hex, "0a03");
+    }
+
+    delayMicroseconds(1500000);
+    writeSegHex(displayNum, hex);
+}
+
+/// <summary>
+/// Converts a number to segment display data.
+/// Leading zeroes are added up to fixedDigits size.
+/// Minus sign added if number negative and bufSize > fixedDigits.
 /// </summary>
 void sevensegment::getSegData(unsigned char* buf, int bufSize, int num, int fixedSize)
 {

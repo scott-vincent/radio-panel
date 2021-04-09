@@ -16,6 +16,7 @@ private:
     unsigned char display3[8];
     double activeFreq;
     double standbyFreq;
+    int transponderState = -1;
     int squawk;
     double setFreqFrac = 0;
     double setSquawk = 0;
@@ -57,6 +58,7 @@ private:
 
     time_t lastFreqAdjust = 0;
     time_t lastSquawkAdjust = 0;
+    time_t lastSquawkPush = 0;
     time_t now;
 
 public:

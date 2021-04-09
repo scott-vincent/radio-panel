@@ -57,6 +57,17 @@ void radio::render()
         }
     }
 
+    // Dim the transponder display if it is not active
+    if (transponderState != simVars->transponderState) {
+        transponderState = simVars->transponderState;
+        if (transponderState < 3) {
+            sevenSegment->dimDisplay(1, true);
+        }
+        else {
+            sevenSegment->dimDisplay(1, false);
+        }
+    }
+
     // Transponder code is in BCO16
     int code = squawk;
     int digit1 = code / 4096;
@@ -127,6 +138,7 @@ void radio::update()
         lastSquawkAdjust = 0;
         setFreqFrac = 0;
         setSquawk = 0;
+        transponderState = -1;
         showNav = false;
         lastSpoilersPos = -1;
         prevSpoilersAutoToggle = -1;
@@ -361,9 +373,24 @@ void radio::gpioSquawkInput()
             else {
                 squawkSetSel++;
             }
+            time(&lastSquawkAdjust);
+            time(&lastSquawkPush);
+        }
+        if (val % 2 == 1) {
+            // Released
+            lastSquawkPush = 0;
         }
         prevSquawkPush = val;
-        time(&lastSquawkAdjust);
+    }
+
+    // Squawk long push (over 1 sec)
+    if (lastSquawkPush > 0) {
+        if (now - lastSquawkPush > 1) {
+            // Long press switches transponder state between Standby and Alt
+            // No SimConnect event to set transponder state yet!
+            squawkSetSel = 0;
+            lastSquawkAdjust = 0;
+        }
     }
 }
 

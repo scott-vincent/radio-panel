@@ -9,6 +9,7 @@ private:
 
 public:
 	sevensegment(bool initWiringPi, int spiChannel);
+	void dimDisplay(int displayNum, bool dim);
 	void getSegData(unsigned char* buf, int bufSize, int num, int fixedSize);
 	void blankSegData(unsigned char* buf, int bufSize, bool wantMinus);
 	void decimalSegData(unsigned char* buf, int pos);
