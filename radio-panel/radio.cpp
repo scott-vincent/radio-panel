@@ -491,9 +491,10 @@ void radio::gpioGearInput()
     int val = globals.gpioCtrl->readToggle(gearUpControl);
     if (val != INT_MIN && val != prevGearUpToggle) {
         // Switch toggled
-        if (val == 1) {
+        if (val == 1 && gearDown) {
             // Switch pressed
             globals.simVars->write(KEY_GEAR_SET, 0);
+            gearDown = false;
         }
         prevGearUpToggle = val;
     }
@@ -502,9 +503,10 @@ void radio::gpioGearInput()
     val = globals.gpioCtrl->readToggle(gearDownControl);
     if (val != INT_MIN && val != prevGearDownToggle) {
         // Switch toggled
-        if (val == 1) {
+        if (val == 1 && !gearDown) {
             // Switch pressed
             globals.simVars->write(KEY_GEAR_SET, 1);
+            gearDown = true;
         }
         prevGearDownToggle = val;
     }

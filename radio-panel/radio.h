@@ -25,6 +25,7 @@ private:
     int spoilersAutoVal = -6;       // Default to spoilers = retracted
     int spoilersDownVal = 14;
     int lastSpoilersPos = -1;       // 0 = auto, 1 = retracted, 2 = half, 3 = full
+    bool gearDown = true;
 
     // Hardware controls
     int freqWholeControl = -1;
