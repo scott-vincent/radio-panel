@@ -58,15 +58,15 @@ void radio::render()
     }
 
     // Dim the transponder display if it is not active
-    if (transponderState != simVars->transponderState) {
-        transponderState = simVars->transponderState;
-        if (transponderState < 3) {
-            sevenSegment->dimDisplay(1, true);
-        }
-        else {
-            sevenSegment->dimDisplay(1, false);
-        }
-    }
+    //if (transponderState != simVars->transponderState) {
+    //    transponderState = simVars->transponderState;
+    //    if (transponderState < 3) {
+    //        sevenSegment->dimDisplay(1, true);
+    //    }
+    //    else {
+    //        sevenSegment->dimDisplay(1, false);
+    //    }
+    //}
 
     // Transponder code is in BCO16
     int code = squawk;
