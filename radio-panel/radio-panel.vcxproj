@@ -139,6 +139,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="globals.cpp" />
     <ClCompile Include="radio-panel.cpp" />
     <ClCompile Include="radio.cpp" />
     <ClCompile Include="gpioctrl.cpp" />
