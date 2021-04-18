@@ -82,7 +82,7 @@ void simvars::write(EVENT_ID eventId, double value)
 void resetConnection(simvars* thisPtr)
 {
     // Only want a subset of SimVars for Radio panel (to save bandwidth)
-    long dataSize = (long)(&thisPtr->simVars.transponderCode) + sizeof(double) - (long)&thisPtr->simVars;
+    dataSize = (long)(&thisPtr->simVars.transponderCode) + sizeof(double) - (long)&thisPtr->simVars;
     request.requestedSize = dataSize;
 
     // Want full data on first connect
