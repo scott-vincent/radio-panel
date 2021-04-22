@@ -45,7 +45,7 @@ struct globalVars
 
     const char* BitmapDir = "bitmaps/";
     const char* SettingsDir = "settings/";
-    const char* SettingsFile = "settings/autopilot-panel.json";
+    const char* SettingsFile = "settings/radio-panel.json";
 
     settings* allSettings = NULL;
     simvars* simVars = NULL;
