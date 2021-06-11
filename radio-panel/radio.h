@@ -26,6 +26,7 @@ private:
     int spoilersDownVal = 14;
     int lastSpoilersPos = -1;       // 0 = auto, 1 = retracted, 2 = half, 3 = full
     bool gearDown = true;
+    bool showSeatBelts = false;
 
     // Hardware controls
     int freqWholeControl = -1;
@@ -40,6 +41,7 @@ private:
     int spoilersDownControl = -1;
     int gearUpControl = -1;
     int gearDownControl = -1;
+    int seatBeltsControl = -1;
 
     int prevFreqWholeVal = 0;
     int prevFreqFracVal = 0;

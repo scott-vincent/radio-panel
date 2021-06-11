@@ -72,6 +72,11 @@
       "Switch": {
         "Toggle": 13
       }
+    },
+    "Seat Belts": {
+      "Lamp": {
+        "Led": 14
+      }
     }
   }
 }

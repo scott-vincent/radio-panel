@@ -31,6 +31,7 @@ void radio::render()
         // Turn off LEDS
         globals.gpioCtrl->writeLed(comControl, false);
         globals.gpioCtrl->writeLed(navControl, false);
+        globals.gpioCtrl->writeLed(seatBeltsControl, false);
 
         // Make sure settings get re-initialised
         loadedAircraft = UNDEFINED;
@@ -92,6 +93,9 @@ void radio::render()
     // Write LEDs
     globals.gpioCtrl->writeLed(comControl, !showNav);
     globals.gpioCtrl->writeLed(navControl, showNav);
+
+    // Seat Belts sign
+    globals.gpioCtrl->writeLed(seatBeltsControl, showSeatBelts);
 }
 
 /// <summary>
@@ -175,6 +179,9 @@ void radio::update()
     if (lastSquawkAdjust == 0) {
         squawk = simVars->transponderCode;
     }
+
+    // Seat Belts
+    showSeatBelts = simVars->seatBeltsSwitch;
 }
 
 void radio::addGpio()
@@ -191,6 +198,7 @@ void radio::addGpio()
     spoilersDownControl = globals.gpioCtrl->addSwitch("Spoilers Down");
     gearUpControl = globals.gpioCtrl->addSwitch("Gear Up");
     gearDownControl = globals.gpioCtrl->addSwitch("Gear Down");
+    seatBeltsControl = globals.gpioCtrl->addLamp("Seat Belts");
 }
 
 void radio::gpioFreqWholeInput()
