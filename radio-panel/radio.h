@@ -17,9 +17,7 @@ private:
     double activeFreq;
     double standbyFreq;
     int transponderState = -1;
-    int squawk;
-    double setFreqFrac = 0;
-    double setSquawk = 0;
+    int squawk = 0;
     bool showNav = false;
     int spoilersVal = INT_MIN;
     int spoilersAutoVal = -6;       // Default to spoilers = retracted

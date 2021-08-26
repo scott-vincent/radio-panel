@@ -140,8 +140,7 @@ void radio::update()
         loadedAircraft = globals.aircraft;
         lastFreqAdjust = 0;
         lastSquawkAdjust = 0;
-        setFreqFrac = 0;
-        setSquawk = 0;
+        squawk = 0;
         transponderState = -1;
         showNav = false;
         lastSpoilersPos = -1;
@@ -185,7 +184,16 @@ void radio::update()
     }
 
     if (lastSquawkAdjust == 0) {
-        squawk = simVars->transponderCode;
+        if (loadedAircraft == BOEING_747 && squawk != 0) {
+            // B747 Bug - Force squawk code back to set value
+            if (simVars->transponderCode != squawk) {
+                int newVal = adjustSquawk(0);
+                globals.simVars->write(KEY_XPNDR_SET, newVal);
+            }
+        }
+        else {
+            squawk = simVars->transponderCode;
+        }
     }
 
     // Seat Belts
