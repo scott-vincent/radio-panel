@@ -148,6 +148,11 @@ void radio::update()
         prevSpoilersDownToggle = -1;
         prevGearUpToggle = -1;
         prevGearDownToggle = -1;
+
+        // B747 Bug - COM1 not working so switch to COM2
+        if (loadedAircraft == BOEING_747 && simVars->com1Transmit == 1) {
+            globals.simVars->write(KEY_COM2_TRANSMIT_SELECT);
+        }
     }
 
     time(&now);
@@ -369,6 +374,7 @@ void radio::gpioButtonsInput()
             }
             fracSetSel = 0;
             lastFreqAdjust = 0;
+            lastComPush = 0;
         }
     }
 
