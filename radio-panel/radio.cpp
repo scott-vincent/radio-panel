@@ -168,7 +168,7 @@ void radio::update()
             standbyFreq = simVars->nav1Standby;
         }
     }
-    else if (simVars->pilotTransmitter == 0) {
+    else if (simVars->com1Transmit == 1) {
         // Using COM1
         activeFreq = simVars->com1Freq;
         if (lastFreqAdjust == 0) {
@@ -237,7 +237,7 @@ void radio::gpioFreqWholeInput()
                 double newVal = adjustNavWhole(adjust);
                 globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
             }
-            else if (simVars->pilotTransmitter == 0) {
+            else if (simVars->com1Transmit == 1) {
                 // Using COM1
                 double newVal = adjustComWhole(adjust);
                 globals.simVars->write(KEY_COM1_STBY_RADIO_SET, newVal);
@@ -274,7 +274,7 @@ void radio::gpioFreqFracInput()
                 double newVal = adjustNavFrac(adjust);
                 globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
             }
-            else if (simVars->pilotTransmitter == 0) {
+            else if (simVars->com1Transmit == 1) {
                 // Using COM1
                 double newVal = adjustComFrac(adjust);
                 globals.simVars->write(KEY_COM1_STBY_RADIO_SET, newVal);
@@ -323,7 +323,7 @@ void radio::gpioButtonsInput()
             if (showNav) {
                 globals.simVars->write(KEY_NAV1_RADIO_SWAP);
             }
-            else if (simVars->pilotTransmitter == 0) {
+            else if (simVars->com1Transmit == 1) {
                 // Using COM1
                 globals.simVars->write(KEY_COM1_RADIO_SWAP);
             }
@@ -344,10 +344,32 @@ void radio::gpioButtonsInput()
             showNav = false;
             globals.gpioCtrl->writeLed(comControl, !showNav);
             globals.gpioCtrl->writeLed(navControl, showNav);
+            time(&lastComPush);
+        }
+        if (val % 2 == 1) {
+            // Released
+            lastComPush = 0;
         }
         fracSetSel = 0;
         lastFreqAdjust = 0;
         prevComPush = val;
+    }
+
+    // Com long push (over 1 sec)
+    if (lastComPush > 0) {
+        if (now - lastComPush > 1) {
+            // Long press switches between COM1 and COM2
+            if (simVars->com1Transmit == 1) {
+                // Switch from COM1 to COM2
+                globals.simVars->write(KEY_COM2_TRANSMIT_SELECT);
+            }
+            else {
+                // Switch from COM2 to COM1
+                globals.simVars->write(KEY_COM1_TRANSMIT_SELECT);
+            }
+            fracSetSel = 0;
+            lastFreqAdjust = 0;
+        }
     }
 
     // Nav push

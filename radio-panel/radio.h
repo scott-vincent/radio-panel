@@ -58,6 +58,7 @@ private:
     int prevGearDownToggle = -1;
 
     time_t lastFreqAdjust = 0;
+    time_t lastComPush = 0;
     time_t lastSquawkAdjust = 0;
     time_t lastSquawkPush = 0;
     time_t now;
