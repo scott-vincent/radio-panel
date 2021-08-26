@@ -169,10 +169,18 @@ void radio::update()
             standbyFreq = simVars->nav1Standby;
         }
     }
-    else {
+    else if (simVars->pilotTransmitter == 0) {
+        // Using COM1
         activeFreq = simVars->com1Freq;
         if (lastFreqAdjust == 0) {
             standbyFreq = simVars->com1Standby;
+        }
+    }
+    else {
+        // Using COM2
+        activeFreq = simVars->com2Freq;
+        if (lastFreqAdjust == 0) {
+            standbyFreq = simVars->com2Standby;
         }
     }
 
@@ -221,9 +229,15 @@ void radio::gpioFreqWholeInput()
                 double newVal = adjustNavWhole(adjust);
                 globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
             }
-            else {
+            else if (simVars->pilotTransmitter == 0) {
+                // Using COM1
                 double newVal = adjustComWhole(adjust);
                 globals.simVars->write(KEY_COM1_STBY_RADIO_SET, newVal);
+            }
+            else {
+                // Using COM2
+                double newVal = adjustComWhole(adjust);
+                globals.simVars->write(KEY_COM2_STBY_RADIO_SET, newVal);
             }
             prevFreqWholeVal = val;
         }
@@ -252,9 +266,15 @@ void radio::gpioFreqFracInput()
                 double newVal = adjustNavFrac(adjust);
                 globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
             }
-            else {
+            else if (simVars->pilotTransmitter == 0) {
+                // Using COM1
                 double newVal = adjustComFrac(adjust);
                 globals.simVars->write(KEY_COM1_STBY_RADIO_SET, newVal);
+            }
+            else {
+                // Using COM2
+                double newVal = adjustComFrac(adjust);
+                globals.simVars->write(KEY_COM2_STBY_RADIO_SET, newVal);
             }
             prevFreqFracVal = val;
         }
@@ -295,8 +315,13 @@ void radio::gpioButtonsInput()
             if (showNav) {
                 globals.simVars->write(KEY_NAV1_RADIO_SWAP);
             }
-            else {
+            else if (simVars->pilotTransmitter == 0) {
+                // Using COM1
                 globals.simVars->write(KEY_COM1_RADIO_SWAP);
+            }
+            else {
+                // Using COM2
+                globals.simVars->write(KEY_COM2_RADIO_SWAP);
             }
             lastFreqAdjust = 0;
         }
