@@ -1,8 +1,6 @@
 echo Building radio-panel
 cd radio-panel
-g++ -lwiringPi -lpthread  \
-    -o radio-panel \
-    -I . \
+g++ -o radio-panel -I . \
     settings.cpp \
     simvarDefs.cpp \
     simvars.cpp \
@@ -11,5 +9,5 @@ g++ -lwiringPi -lpthread  \
     sevensegment.cpp \
     radio.cpp \
     radio-panel.cpp \
-    || exit
+    -lwiringPi -lpthread || exit
 echo Done
