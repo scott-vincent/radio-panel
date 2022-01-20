@@ -1,0 +1,32 @@
+3 x 8 digit 7-segment displays
+
+Requires the following line in /boot/config.txt: dtoverlay=spi0-1cs,no_miso
+
+Orange		3.3v		Pin 1
+Blue		Gnd		Pin 6
+White		DIN		Pin 19
+Brown		CS		Pin 24
+Green		CLK		Pin 23
+
+3 x Rotary switches
+
+Brown		Gnd			Pin 6
+Green/White	Rotary 1		Pin a
+Orange		Rotary 2		Pin b
+Blue		Push			Pin c
+
+		a			b			c
+Freq Whole	Pin 3	GPIO 2		Pin 5	GPIO 3
+Freq Fraction	Pin 11	GPIO 17		Pin 13	GPIO 27		Pin 15	GPIO 22
+Squawk		Pin 16	GPIO 23		Pin 18	GPIO 24		Pin 21	GPIO 9
+
+3 x Buttons (no Led for swap)
+
+White		Gnd			Pin 6
+Blue/Green	Push			Pin a
+Orange/Brown	Led			Pin b
+
+		a			b			LED Colour
+Swap		Pin 37	GPIO 26
+Com		Pin 38	GPIO 20		Pin 40	GPIO 21		Yellow
+Nav		Pin 32	GPIO 12		Pin 36	GPIO 16		Red
