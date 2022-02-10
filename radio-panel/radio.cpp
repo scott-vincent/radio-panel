@@ -10,8 +10,6 @@ radio::radio()
 
     // Initialise 7-segment displays
     sevenSegment = new sevensegment(false, 0);
-
-    fflush(stdout);
 }
 
 void radio::blankDisplays()
@@ -45,6 +43,14 @@ void radio::render()
     }
     else {
         writeCom(display1, activeFreq);
+
+        if (receiveAllHideDelay > 0) {
+            // Add dot on right if receiving on ALL
+            if (simVars->com1Receive && simVars->com2Receive) {
+                sevenSegment->decimalSegData(display1, 6);
+            }
+            receiveAllHideDelay--;
+        }
     }
 
     // Standby frequency
@@ -53,6 +59,7 @@ void radio::render()
     }
     else {
         writeCom(display2, standbyFreq);
+
         if (lastFreqAdjust != 0 && fracSetSel == 1) {
             sevenSegment->decimalSegData(display2, 6);
         }
@@ -149,10 +156,14 @@ void radio::update()
         prevGearUpToggle = -1;
         prevGearDownToggle = -1;
 
-        // B747 Bug - COM1 not working so switch to COM2
-        if (loadedAircraft == BOEING_747 && simVars->com1Transmit == 1) {
-            globals.simVars->write(KEY_COM2_TRANSMIT_SELECT);
-        }
+        // Set COM2 to GUARD frequency and receive on ALL (needed for POSCON)
+        standbyFreq = 121.5;
+        globals.simVars->write(KEY_COM2_STBY_RADIO_SET, adjustComWhole(0));
+        globals.simVars->write(KEY_COM2_RADIO_SWAP);
+        globals.simVars->write(KEY_COM1_TRANSMIT_SELECT);
+        globals.simVars->write(KEY_COM1_RECEIVE_SELECT, 1);
+        globals.simVars->write(KEY_COM2_RECEIVE_SELECT, 1);
+        receiveAllHideDelay = 60;
     }
 
     time(&now);
@@ -312,9 +323,36 @@ void radio::gpioFreqFracInput()
             else {
                 fracSetSel = 1;
             }
+            receiveAllHideDelay = 60;
+            time(&lastFreqPush);
+        }
+        if (val % 2 == 1) {
+            // Released
+            lastFreqPush = 0;
         }
         prevFreqFracPush = val;
         time(&lastFreqAdjust);
+    }
+
+    // Frequency fraction long push (over 1 sec)
+    if (lastFreqPush > 0) {
+        if (now - lastFreqPush > 1) {
+            // Long press toggles receive ALL
+            receiveAllHideDelay = 60;
+            bool newVal = 1;
+            if (simVars->com1Receive && simVars->com2Receive) {
+                newVal = 0;
+            }
+            if (simVars->com1Transmit == 1) {
+                globals.simVars->write(KEY_COM1_RECEIVE_SELECT, 1);
+                globals.simVars->write(KEY_COM2_RECEIVE_SELECT, newVal);
+            }
+            else {
+                globals.simVars->write(KEY_COM2_RECEIVE_SELECT, 1);
+                globals.simVars->write(KEY_COM1_RECEIVE_SELECT, newVal);
+            }
+            lastFreqPush = 0;
+        }
     }
 }
 
@@ -345,37 +383,36 @@ void radio::gpioButtonsInput()
     val = globals.gpioCtrl->readPush(comControl);
     if (val != INT_MIN) {
         if (prevComPush % 2 == 1) {
-            // Show Com1
-            showNav = false;
-            globals.gpioCtrl->writeLed(comControl, !showNav);
-            globals.gpioCtrl->writeLed(navControl, showNav);
-            time(&lastComPush);
-        }
-        if (val % 2 == 1) {
-            // Released
-            lastComPush = 0;
+            // If showing NAV, show COM1
+            if (showNav) {
+                showNav = false;
+                globals.gpioCtrl->writeLed(comControl, !showNav);
+                globals.gpioCtrl->writeLed(navControl, showNav);
+            }
+            else {
+                // Already showing COM so switch between COM1 and COM2
+                receiveAllHideDelay = 60;
+                bool newVal = 0;
+                if (simVars->com1Receive && simVars->com2Receive) {
+                    newVal = 1;
+                }
+                if (simVars->com1Transmit == 1) {
+                    // Switch transmit from COM1 to COM2
+                    globals.simVars->write(KEY_COM2_TRANSMIT_SELECT);
+                    globals.simVars->write(KEY_COM2_RECEIVE_SELECT, 1);
+                    globals.simVars->write(KEY_COM1_RECEIVE_SELECT, newVal);
+                }
+                else {
+                    // Switch transmit from COM2 to COM1
+                    globals.simVars->write(KEY_COM1_TRANSMIT_SELECT);
+                    globals.simVars->write(KEY_COM1_RECEIVE_SELECT, 1);
+                    globals.simVars->write(KEY_COM2_RECEIVE_SELECT, newVal);
+                }
+            }
         }
         fracSetSel = 0;
         lastFreqAdjust = 0;
         prevComPush = val;
-    }
-
-    // Com long push (over 1 sec)
-    if (lastComPush > 0) {
-        if (now - lastComPush > 1) {
-            // Long press switches between COM1 and COM2
-            if (simVars->com1Transmit == 1) {
-                // Switch from COM1 to COM2
-                globals.simVars->write(KEY_COM2_TRANSMIT_SELECT);
-            }
-            else {
-                // Switch from COM2 to COM1
-                globals.simVars->write(KEY_COM1_TRANSMIT_SELECT);
-            }
-            fracSetSel = 0;
-            lastFreqAdjust = 0;
-            lastComPush = 0;
-        }
     }
 
     // Nav push

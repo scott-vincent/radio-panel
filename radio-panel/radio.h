@@ -25,6 +25,7 @@ private:
     int lastSpoilersPos = -1;       // 0 = auto, 1 = retracted, 2 = half, 3 = full
     bool gearDown = true;
     bool showSeatBelts = false;
+    int receiveAllHideDelay = 0;
 
     // Hardware controls
     int freqWholeControl = -1;
@@ -58,7 +59,7 @@ private:
     int prevGearDownToggle = -1;
 
     time_t lastFreqAdjust = 0;
-    time_t lastComPush = 0;
+    time_t lastFreqPush = 0;
     time_t lastSquawkAdjust = 0;
     time_t lastSquawkPush = 0;
     time_t now;
