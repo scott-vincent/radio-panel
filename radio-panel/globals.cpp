@@ -48,8 +48,6 @@ void identifyAircraft(char* aircraft)
             }
         }
         strcpy(globals.lastAircraft, aircraft);
-        printf("Aircraft: %s\n", aircraft);
-        fflush(stdout);
     }
 }
 
@@ -60,9 +58,20 @@ void receiveDelta(char *deltaData, long deltaSize, char* simVarsPtr)
 {
     char* dataPtr = &deltaData[0];
 
+    long fullDeltaSize = deltaSize;
     while (deltaSize > 0) {
         DeltaDouble* deltaDouble = (DeltaDouble*)dataPtr;
-        if (deltaDouble->offset < 2048) {
+        if (deltaDouble->offset & 0x10000) {
+            // Must be a string
+            DeltaString* deltaString = (DeltaString*)dataPtr;
+            char* stringPtr = simVarsPtr + (deltaString->offset & 0xffff);
+            strncpy(stringPtr, deltaString->data, 32);
+            stringPtr[31] = '\0';
+
+            dataPtr += deltaStringSize;
+            deltaSize -= deltaStringSize;
+        }
+        else {
             // Must be a double
             char* doublePos = simVarsPtr + deltaDouble->offset;
             double* doublePtr = (double*)doublePos;
@@ -70,15 +79,16 @@ void receiveDelta(char *deltaData, long deltaSize, char* simVarsPtr)
 
             dataPtr += deltaDoubleSize;
             deltaSize -= deltaDoubleSize;
-        }
-        else {
-            // Must be a string
-            DeltaString* deltaString = (DeltaString*)dataPtr;
-            char* stringPtr = simVarsPtr + deltaString->offset - 2048;
-            strncpy(stringPtr, deltaString->data, 32);
 
-            dataPtr += deltaStringSize;
-            deltaSize -= deltaStringSize;
+            //// Debug code
+            //int offset = deltaDouble->offset / 8;
+            //if (offset != 0 && offset != 28) {
+            //    time_t now;
+            //    time(&now);
+            //    printf("deltaSize: %d  offset: %d  val: %f  tcas: %f  xpdr: %f  %s", fullDeltaSize / 16, offset, deltaDouble->data,
+            //        globals.simVars->simVars.tcasState, globals.simVars->simVars.transponderState, asctime(localtime(&now)));
+            //    fflush(stdout);
+            //}
         }
     }
 }

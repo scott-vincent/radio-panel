@@ -16,9 +16,11 @@ private:
     unsigned char display3[8];
     double activeFreq;
     double standbyFreq;
+    int tcasState = -1;
     int transponderState = -1;
     int squawk = 0;
     bool showNav = false;
+    bool usingNav1 = true;
     int spoilersVal = INT_MIN;
     int spoilersAutoVal = -6;       // Default to spoilers = retracted
     int spoilersDownVal = 14;
@@ -63,6 +65,8 @@ private:
     time_t lastSquawkAdjust = 0;
     time_t lastSquawkPush = 0;
     time_t now;
+    double tcas = 0;
+    double xpdr = 0;
 
 public:
     radio();

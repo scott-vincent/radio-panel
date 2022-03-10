@@ -255,7 +255,7 @@ int gpioctrl::addLamp(const char* controlName)
 
     if (gpio[newControl][Led] != INT_MIN) {
         initPin(gpio[newControl][Led], false);
-        printf("Added %s led: GPIO%d", controlName, gpio[newControl][Led]);
+        printf("Added %s led: GPIO%d\n", controlName, gpio[newControl][Led]);
     }
 
     validateControl(controlName, newControl);

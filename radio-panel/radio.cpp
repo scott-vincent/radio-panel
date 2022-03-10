@@ -66,15 +66,16 @@ void radio::render()
     }
 
     // Dim the transponder display if it is not active
-    //if (transponderState != simVars->transponderState) {
-    //    transponderState = simVars->transponderState;
-    //    if (transponderState < 3) {
-    //        sevenSegment->dimDisplay(1, true);
-    //    }
-    //    else {
-    //        sevenSegment->dimDisplay(1, false);
-    //    }
-    //}
+    if (tcasState != simVars->tcasState || transponderState != simVars->transponderState) {
+        tcasState = simVars->tcasState;
+        transponderState = simVars->transponderState;
+        if (loadedAircraft == FBW_A320 && (tcasState == 0 || transponderState == 0)) {
+            sevenSegment->dimDisplay(1, true);
+        }
+        else {
+            sevenSegment->dimDisplay(1, false);
+        }
+    }
 
     // Transponder code is in BCO16
     int code = squawk;
@@ -148,8 +149,10 @@ void radio::update()
         lastFreqAdjust = 0;
         lastSquawkAdjust = 0;
         squawk = 0;
+        tcasState = -1;
         transponderState = -1;
         showNav = false;
+        usingNav1 = true;
         lastSpoilersPos = -1;
         prevSpoilersAutoToggle = -1;
         prevSpoilersDownToggle = -1;
@@ -175,13 +178,29 @@ void radio::update()
     gpioSpoilersInput();
     gpioGearInput();
 
+    // Debug code
+    if (tcas != simVars->tcasState || xpdr != simVars->transponderState) {
+        printf("tcas: %f  xpdr: %f  %s", simVars->tcasState, simVars->transponderState, asctime(localtime(&now)));
+        fflush(stdout);
+        tcas = simVars->tcasState;
+        xpdr = simVars->transponderState;
+    }
+
     // Only update local values from sim if they are not currently being
     // adjusted by the rotary encoders. This stops the displayed values
     // from jumping around due to lag of fetch/update cycle.
     if (showNav) {
-        activeFreq = simVars->nav1Freq;
-        if (lastFreqAdjust == 0) {
-            standbyFreq = simVars->nav1Standby;
+        if (usingNav1) {
+            activeFreq = simVars->nav1Freq;
+            if (lastFreqAdjust == 0) {
+                standbyFreq = simVars->nav1Standby;
+            }
+        }
+        else {
+            activeFreq = simVars->nav2Freq;
+            if (lastFreqAdjust == 0) {
+                standbyFreq = simVars->nav2Standby;
+            }
         }
     }
     else if (simVars->com1Transmit == 1) {
@@ -251,7 +270,12 @@ void radio::gpioFreqWholeInput()
             // Adjust frequency
             if (showNav) {
                 double newVal = adjustNavWhole(adjust);
-                globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
+                if (usingNav1) {
+                    globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
+                }
+                else {
+                    globals.simVars->write(KEY_NAV2_STBY_SET, newVal);
+                }
             }
             else if (simVars->com1Transmit == 1) {
                 // Using COM1
@@ -288,7 +312,12 @@ void radio::gpioFreqFracInput()
             // Adjust frequency
             if (showNav) {
                 double newVal = adjustNavFrac(adjust);
-                globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
+                if (usingNav1) {
+                    globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
+                }
+                else {
+                    globals.simVars->write(KEY_NAV2_STBY_SET, newVal);
+                }
             }
             else if (simVars->com1Transmit == 1) {
                 // Using COM1
@@ -364,7 +393,12 @@ void radio::gpioButtonsInput()
         if (prevSwapPush % 2 == 1) {
             // Swap active and standby frequencies
             if (showNav) {
-                globals.simVars->write(KEY_NAV1_RADIO_SWAP);
+                if (usingNav1) {
+                    globals.simVars->write(KEY_NAV1_RADIO_SWAP);
+                }
+                else {
+                    globals.simVars->write(KEY_NAV2_RADIO_SWAP);
+                }
             }
             else if (simVars->com1Transmit == 1) {
                 // Using COM1
@@ -419,10 +453,16 @@ void radio::gpioButtonsInput()
     val = globals.gpioCtrl->readPush(navControl);
     if (val != INT_MIN) {
         if (prevNavPush % 2 == 1) {
-            // Show Nav1
-            showNav = true;
-            globals.gpioCtrl->writeLed(comControl, !showNav);
-            globals.gpioCtrl->writeLed(navControl, showNav);
+            // If showing COM, show NAV1
+            if (!showNav) {
+                showNav = true;
+                globals.gpioCtrl->writeLed(comControl, !showNav);
+                globals.gpioCtrl->writeLed(navControl, showNav);
+            }
+            else {
+                // Already showing NAV so switch between NAV1 and NAV2
+                usingNav1 = !usingNav1;
+            }
 
             // If Com is also being pressed exit radio panel
             // and let it auto-restart (full reset).
