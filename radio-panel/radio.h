@@ -65,8 +65,6 @@ private:
     time_t lastSquawkAdjust = 0;
     time_t lastSquawkPush = 0;
     time_t now;
-    double tcas = 0;
-    double xpdr = 0;
 
 public:
     radio();

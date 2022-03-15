@@ -178,14 +178,6 @@ void radio::update()
     gpioSpoilersInput();
     gpioGearInput();
 
-    // Debug code
-    if (tcas != simVars->tcasState || xpdr != simVars->transponderState) {
-        printf("tcas: %f  xpdr: %f  %s", simVars->tcasState, simVars->transponderState, asctime(localtime(&now)));
-        fflush(stdout);
-        tcas = simVars->tcasState;
-        xpdr = simVars->transponderState;
-    }
-
     // Only update local values from sim if they are not currently being
     // adjusted by the rotary encoders. This stops the displayed values
     // from jumping around due to lag of fetch/update cycle.
