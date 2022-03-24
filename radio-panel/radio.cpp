@@ -39,7 +39,12 @@ void radio::render()
 
     // Active frequency
     if (showNav) {
-        writeNav(display1, activeFreq);
+        if (usingNav < 2) {
+            writeNav(display1, activeFreq);
+        }
+        else {
+            writeAdf(display1, activeFreq);
+        }
     }
     else {
         writeCom(display1, activeFreq);
@@ -55,7 +60,12 @@ void radio::render()
 
     // Standby frequency
     if (showNav) {
-        writeNav(display2, standbyFreq);
+        if (usingNav < 2) {
+            writeNav(display2, standbyFreq);
+        }
+        else {
+            writeAdf(display2, standbyFreq);
+        }
     }
     else {
         writeCom(display2, standbyFreq);
@@ -140,6 +150,31 @@ void radio::writeNav(unsigned char* display, double freq)
     sevenSegment->blankSegData(&display[6], 2, false);
 }
 
+/// <summary>
+/// Adf is 4 digits + .0 but display is 8 digits
+/// so leave two blank on left and one on right.
+/// Leading 0 is also shown as a blank.
+/// </summary>
+void radio::writeAdf(unsigned char* display, int freq)
+{
+    int freq1000 = freq / 100;
+    int freq100 = freq % 100;
+
+    if (freq1000 > 9) {
+        sevenSegment->blankSegData(display, 2, false);
+        sevenSegment->getSegData(&display[2], 2, freq1000, 2);
+    }
+    else {
+        sevenSegment->blankSegData(display, 3, false);
+        sevenSegment->getSegData(&display[3], 1, freq1000, 1);
+    }
+
+    sevenSegment->getSegData(&display[4], 2, freq100, 2);
+    sevenSegment->decimalSegData(display, 5);
+    sevenSegment->getSegData(&display[6], 1, 0, 1);
+    sevenSegment->blankSegData(&display[7], 1, false);
+}
+
 void radio::update()
 {
     // Check for aircraft change
@@ -152,7 +187,7 @@ void radio::update()
         tcasState = -1;
         transponderState = -1;
         showNav = false;
-        usingNav1 = true;
+        usingNav = 0;
         lastSpoilersPos = -1;
         prevSpoilersAutoToggle = -1;
         prevSpoilersDownToggle = -1;
@@ -182,17 +217,28 @@ void radio::update()
     // adjusted by the rotary encoders. This stops the displayed values
     // from jumping around due to lag of fetch/update cycle.
     if (showNav) {
-        if (usingNav1) {
+        switch (usingNav) {
+        case 0:
+            // Using NAV1
             activeFreq = simVars->nav1Freq;
             if (lastFreqAdjust == 0) {
                 standbyFreq = simVars->nav1Standby;
             }
-        }
-        else {
+            break;
+        case 1:
+            // Using NAV2
             activeFreq = simVars->nav2Freq;
             if (lastFreqAdjust == 0) {
                 standbyFreq = simVars->nav2Standby;
             }
+            break;
+        case 2:
+            // Using ADF
+            activeFreq = simVars->adfFreq;
+            if (lastFreqAdjust == 0) {
+                standbyFreq = simVars->adfStandby;
+            }
+            break;
         }
     }
     else if (simVars->com1Transmit == 1) {
@@ -261,12 +307,25 @@ void radio::gpioFreqWholeInput()
         if (adjust != 0) {
             // Adjust frequency
             if (showNav) {
-                double newVal = adjustNavWhole(adjust);
-                if (usingNav1) {
+                switch (usingNav) {
+                case 0:
+                {
+                    double newVal = adjustNavWhole(adjust);
                     globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
+                    break;
                 }
-                else {
+                case 1:
+                {
+                    double newVal = adjustNavWhole(adjust);
                     globals.simVars->write(KEY_NAV2_STBY_SET, newVal);
+                    break;
+                }
+                case 2:
+                {
+                    double newVal = adjustAdf(standbyFreq, adjust, -1);
+                    globals.simVars->write(KEY_ADF_STBY_SET, newVal);
+                    break;
+                }
                 }
             }
             else if (simVars->com1Transmit == 1) {
@@ -303,12 +362,25 @@ void radio::gpioFreqFracInput()
         if (adjust != 0) {
             // Adjust frequency
             if (showNav) {
-                double newVal = adjustNavFrac(adjust);
-                if (usingNav1) {
+                switch (usingNav) {
+                case 0:
+                {
+                    double newVal = adjustNavFrac(adjust);
                     globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
+                    break;
                 }
-                else {
+                case 1:
+                {
+                    double newVal = adjustNavFrac(adjust);
                     globals.simVars->write(KEY_NAV2_STBY_SET, newVal);
+                    break;
+                }
+                case 2:
+                {
+                    double newVal = adjustAdf(standbyFreq, adjust, fracSetSel);
+                    globals.simVars->write(KEY_ADF_STBY_SET, newVal);
+                    break;
+                }
                 }
             }
             else if (simVars->com1Transmit == 1) {
@@ -385,11 +457,16 @@ void radio::gpioButtonsInput()
         if (prevSwapPush % 2 == 1) {
             // Swap active and standby frequencies
             if (showNav) {
-                if (usingNav1) {
+                switch (usingNav) {
+                case 0:
                     globals.simVars->write(KEY_NAV1_RADIO_SWAP);
-                }
-                else {
+                    break;
+                case 1:
                     globals.simVars->write(KEY_NAV2_RADIO_SWAP);
+                    break;
+                case 2:
+                    globals.simVars->write(KEY_ADF1_RADIO_SWAP);
+                    break;
                 }
             }
             else if (simVars->com1Transmit == 1) {
@@ -452,8 +529,13 @@ void radio::gpioButtonsInput()
                 globals.gpioCtrl->writeLed(navControl, showNav);
             }
             else {
-                // Already showing NAV so switch between NAV1 and NAV2
-                usingNav1 = !usingNav1;
+                // Already showing NAV so switch between NAV1, NAV2 and ADF
+                if (usingNav == 2) {
+                    usingNav = 0;
+                }
+                else {
+                    usingNav++;
+                }
             }
 
             // If Com is also being pressed exit radio panel
@@ -794,6 +876,52 @@ double radio::adjustNavFrac(int adjust)
     int digit5 = frac % 10;
 
     return 65536 * digit1 + 4096 * digit2 + 256 * digit3 + 16 * digit4 + digit5;
+}
+
+int radio::adjustAdf(int val, int adjust, int setSel)
+{
+    int highDigits = (val % 10000) / 100;
+    int digit3 = (val % 100) / 10;
+    int digit4 = val % 10;
+
+    if (setSel == -1) {
+        highDigits += adjust;
+        if (highDigits >= 18) {
+            highDigits -= 17;
+        }
+        else if (highDigits < 1) {
+            highDigits += 17;
+        }
+    }
+    else if (setSel == 0) {
+        // Adjust 3rd digit
+        digit3 = adjustDigit(digit3, adjust);
+    }
+    else {
+        // Adjust 4th digit
+        digit4 = adjustDigit(digit4, adjust);
+    }
+
+    standbyFreq = highDigits * 100 + digit3 * 10 + digit4;
+
+    // Convert to BCD
+    int digit1 = highDigits / 10;
+    int digit2 = highDigits % 10;
+
+    return 268435456.0 * digit1 + 16777216.0 * digit2 + 1048576.0 * digit3 + 65536 * digit4;
+}
+
+int radio::adjustDigit(int val, int adjust)
+{
+    val += adjust;
+    if (val > 9) {
+        val = 0;
+    }
+    else if (val < 0) {
+        val = 9;
+    }
+
+    return val;
 }
 
 int radio::adjustSquawk(int adjust)

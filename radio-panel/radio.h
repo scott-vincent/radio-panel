@@ -20,7 +20,7 @@ private:
     int transponderState = -1;
     int squawk = 0;
     bool showNav = false;
-    bool usingNav1 = true;
+    int usingNav = 0;              // 0 = NAV1, 1 = NAV2, 2 = ADF
     int spoilersVal = INT_MIN;
     int spoilersAutoVal = -6;       // Default to spoilers = retracted
     int spoilersDownVal = 14;
@@ -75,6 +75,7 @@ private:
     void blankDisplays();
     void writeCom(unsigned char* display, double freq);
     void writeNav(unsigned char* display, double freq);
+    void writeAdf(unsigned char* display, int freq);
     void addGpio();
     void gpioFreqWholeInput();
     void gpioFreqFracInput();
@@ -87,6 +88,8 @@ private:
     double adjustComFrac(int adjust);
     double adjustNavWhole(int adjust);
     double adjustNavFrac(int adjust);
+    int adjustAdf(int val, int adjust, int setSel);
+    int adjustDigit(int val, int adjust);
     int adjustSquawk(int adjust);
     int adjustSquawkDigit(int val, int adjust);
 };
