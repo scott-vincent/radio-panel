@@ -1,6 +1,6 @@
 /*
  * Flight Simulator Radio Panel
- * Copyright (c) 2021 Scott Vincent
+ * Copyright (c) 2022 Scott Vincent
  */
 
 #include <stdio.h>
