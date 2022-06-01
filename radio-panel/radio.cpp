@@ -693,7 +693,7 @@ void radio::gpioSpoilersInput()
             // Set spoilers to retracted or half
             switch (spoilersPos) {
             case 1:
-                //globals.simVars->write(KEY_SPOILERS_ARM_SET, 0);
+                globals.simVars->write(KEY_SPOILERS_ARM_SET, 0);
                 globals.simVars->write(KEY_SPOILERS_OFF);
                 break;
             case 2:
