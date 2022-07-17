@@ -409,12 +409,23 @@ void radio::gpioFreqFracInput()
     val = globals.gpioCtrl->readPush(freqFracControl);
     if (val != INT_MIN) {
         if (prevFreqFracPush % 2 == 1) {
-            // Short press switches between 10s and 100ths frequency increments
-            if (fracSetSel == 1) {
-                fracSetSel = 0;
+            if (usingNav == 2) {
+                // Short press switches between 10s, units and tenths ADF increments
+                if (fracSetSel == 2) {
+                    fracSetSel = 0;
+                }
+                else {
+                    fracSetSel++;
+                }
             }
             else {
-                fracSetSel = 1;
+                // Short press switches between 10s and 100ths frequency increments
+                if (fracSetSel == 1) {
+                    fracSetSel = 0;
+                }
+                else {
+                    fracSetSel = 1;
+                }
             }
             receiveAllHideDelay = 60;
             time(&lastFreqPush);
@@ -878,11 +889,16 @@ double radio::adjustNavFrac(int adjust)
     return 65536 * digit1 + 4096 * digit2 + 256 * digit3 + 16 * digit4 + digit5;
 }
 
-int radio::adjustAdf(int val, int adjust, int setSel)
+int radio::adjustAdf(double val, int adjust, int setSel)
 {
-    int highDigits = (val % 10000) / 100;
-    int digit3 = (val % 100) / 10;
-    int digit4 = val % 10;
+    int whole = val;
+    double rest = val - whole;
+    int frac = (rest + 0.01) * 10;
+
+    int highDigits = (whole % 10000) / 100;
+    int digit3 = (whole % 100) / 10;
+    int digit4 = whole % 10;
+    int digit5 = frac;
 
     if (setSel == -1) {
         highDigits += adjust;
@@ -897,18 +913,22 @@ int radio::adjustAdf(int val, int adjust, int setSel)
         // Adjust 3rd digit
         digit3 = adjustDigit(digit3, adjust);
     }
-    else {
+    else if (setSel == 1) {
         // Adjust 4th digit
         digit4 = adjustDigit(digit4, adjust);
     }
+    else {
+        // Adjust 5th digit
+        digit5 = adjustDigit(digit5, adjust);
+    }
 
-    standbyFreq = highDigits * 100 + digit3 * 10 + digit4;
+    standbyFreq = highDigits * 100 + digit3 * 10 + digit4 + digit5 / 10;
 
     // Convert to BCD
     int digit1 = highDigits / 10;
     int digit2 = highDigits % 10;
 
-    return 268435456.0 * digit1 + 16777216.0 * digit2 + 1048576.0 * digit3 + 65536 * digit4;
+    return 268435456.0 * digit1 + 16777216.0 * digit2 + 1048576.0 * digit3 + 65536 * digit4 + 4096 * digit5;
 }
 
 int radio::adjustDigit(int val, int adjust)

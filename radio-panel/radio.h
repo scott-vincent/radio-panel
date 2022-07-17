@@ -88,7 +88,7 @@ private:
     double adjustComFrac(int adjust);
     double adjustNavWhole(int adjust);
     double adjustNavFrac(int adjust);
-    int adjustAdf(int val, int adjust, int setSel);
+    int adjustAdf(double val, int adjust, int setSel);
     int adjustDigit(int val, int adjust);
     int adjustSquawk(int adjust);
     int adjustSquawkDigit(int val, int adjust);
