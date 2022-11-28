@@ -82,7 +82,7 @@ void sevensegment::dimDisplay(int displayNum, bool dim)
         strcpy(hex, "0a03");
     }
 
-    delayMicroseconds(1500000);
+    delayMicroseconds(500);
     writeSegHex(displayNum, hex);
 }
 

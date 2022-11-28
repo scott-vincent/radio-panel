@@ -16,8 +16,10 @@ private:
     unsigned char display3[8];
     double activeFreq;
     double standbyFreq;
-    int tcasState = -1;
+    int tcasMode = -1;
+    int lastTcasMode = -1;
     int transponderState = -1;
+    int lastTransponderState = -1;
     int squawk = 0;
     bool showNav = false;
     int usingNav = 0;              // 0 = NAV1, 1 = NAV2, 2 = ADF
@@ -64,6 +66,7 @@ private:
     time_t lastFreqPush = 0;
     time_t lastSquawkAdjust = 0;
     time_t lastSquawkPush = 0;
+    time_t lastTcasAdjust = 0;
     time_t now;
 
 public:

@@ -75,11 +75,21 @@ void radio::render()
         }
     }
 
+    if (lastTcasAdjust == 0) {
+        tcasMode = simVars->jbTcasMode;
+        if (loadedAircraft != AIRBUS_A310) {
+            transponderState = simVars->transponderState;
+        }
+    }
+
     // Dim the transponder display if it is not active
-    if (tcasState != simVars->tcasState || transponderState != simVars->transponderState) {
-        tcasState = simVars->tcasState;
-        transponderState = simVars->transponderState;
-        if (loadedAircraft == FBW_A320 && (tcasState == 0 || transponderState == 0)) {
+    if (tcasMode != lastTcasMode || transponderState != lastTransponderState) {
+        lastTcasMode = tcasMode;
+        lastTransponderState = transponderState;
+        if (loadedAircraft == AIRBUS_A310 && tcasMode == 0) {
+            sevenSegment->dimDisplay(1, true);
+        }
+        else if (loadedAircraft == FBW_A320 && transponderState == 0) {
             sevenSegment->dimDisplay(1, true);
         }
         else {
@@ -184,7 +194,7 @@ void radio::update()
         lastFreqAdjust = 0;
         lastSquawkAdjust = 0;
         squawk = 0;
-        tcasState = -1;
+        tcasMode = -1;
         transponderState = -1;
         showNav = false;
         usingNav = 0;
@@ -224,6 +234,10 @@ void radio::update()
             if (lastFreqAdjust == 0) {
                 standbyFreq = simVars->nav1Standby;
             }
+            if (loadedAircraft == AIRBUS_A310) {
+                // A310 uses NAV1 for ILS frequency
+                activeFreq = standbyFreq;
+            }
             break;
         case 1:
             // Using NAV2
@@ -256,7 +270,11 @@ void radio::update()
         }
     }
 
-    if (lastSquawkAdjust == 0) {
+    if (loadedAircraft == AIRBUS_A310) {
+        // Current value is unknown so always read
+        squawk = simVars->transponderCode;
+    }
+    else if (lastSquawkAdjust == 0) {
         if (loadedAircraft == BOEING_747 && squawk != 0) {
             // B747 Bug - Force squawk code back to set value
             if (simVars->transponderCode != squawk) {
@@ -311,7 +329,13 @@ void radio::gpioFreqWholeInput()
                 case 0:
                 {
                     double newVal = adjustNavWhole(adjust);
-                    globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
+                    if (loadedAircraft == AIRBUS_A310) {
+                        // A310 uses NAV1 to set ILS frequency
+                        globals.simVars->write(KEY_NAV1_STBY_SET, standbyFreq);
+                    }
+                    else {
+                        globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
+                    }
                     break;
                 }
                 case 1:
@@ -366,7 +390,13 @@ void radio::gpioFreqFracInput()
                 case 0:
                 {
                     double newVal = adjustNavFrac(adjust);
-                    globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
+                    if (loadedAircraft == AIRBUS_A310) {
+                        // A310 uses NAV1 to set ILS frequency
+                        globals.simVars->write(KEY_NAV1_STBY_SET, standbyFreq);
+                    }
+                    else {
+                        globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
+                    }
                     break;
                 }
                 case 1:
@@ -541,11 +571,16 @@ void radio::gpioButtonsInput()
             }
             else {
                 // Already showing NAV so switch between NAV1, NAV2 and ADF
-                if (usingNav == 2) {
+                if (loadedAircraft == AIRBUS_A310) {
                     usingNav = 0;
                 }
                 else {
-                    usingNav++;
+                    if (usingNav == 2) {
+                        usingNav = 0;
+                    }
+                    else {
+                        usingNav++;
+                    }
                 }
             }
 
@@ -580,7 +615,17 @@ void radio::gpioSquawkInput()
         if (adjust != 0) {
             // Adjust squawk
             int newVal = adjustSquawk(adjust);
-            globals.simVars->write(KEY_XPNDR_SET, newVal);
+            if (loadedAircraft == AIRBUS_A310) {
+                if (squawkSetSel == 0) {
+                    globals.simVars->write(KEY_XPNDR_HIGH_SET, adjust);
+                }
+                else if (squawkSetSel == 2) {
+                    globals.simVars->write(KEY_XPNDR_LOW_SET, adjust);
+                }
+            }
+            else {
+                globals.simVars->write(KEY_XPNDR_SET, newVal);
+            }
             prevSquawkVal = val;
         }
         time(&lastSquawkAdjust);
@@ -598,14 +643,18 @@ void radio::gpioSquawkInput()
     if (val != INT_MIN) {
         if (prevSquawkPush % 2 == 1) {
             // Short press switches to next digit
+            if (loadedAircraft == AIRBUS_A310) {
+                // Want sel to be 0 or 2
+                squawkSetSel++;
+            }
             if (lastSquawkAdjust == 0 || squawkSetSel == 3) {
                 squawkSetSel = 0;
             }
             else {
                 squawkSetSel++;
             }
-            time(&lastSquawkAdjust);
             time(&lastSquawkPush);
+            time(&lastSquawkAdjust);
         }
         if (val % 2 == 1) {
             // Released
@@ -613,14 +662,41 @@ void radio::gpioSquawkInput()
         }
         prevSquawkPush = val;
     }
+    else if (lastSquawkAdjust != 0) {
+        // Reset digit set selection if more than 2 seconds since last adjustment
+        if (now - lastSquawkAdjust > 2) {
+            squawkSetSel = 0;
+            lastSquawkAdjust = 0;
+        }
+    }
 
     // Squawk long push (over 1 sec)
     if (lastSquawkPush > 0) {
         if (now - lastSquawkPush > 1) {
-            // Long press switches transponder state between Standby and Alt
-            // No SimConnect event to set transponder state yet!
-            squawkSetSel = 0;
+            if (loadedAircraft == AIRBUS_A310) {
+                // Long press switches TCAS mode between Standby and TA/RA
+                if (tcasMode == 0) {
+                    tcasMode = 2;
+                }
+                else {
+                    tcasMode = 0;
+                }
+                globals.simVars->write(KEY_XPNDR_STATE, tcasMode);
+            }
+            else if (loadedAircraft == FBW_A320) {
+                // Long press switches transponder state between Standby and Auto
+                transponderState = 1 - transponderState;
+                globals.simVars->write(KEY_XPNDR_STATE, transponderState);
+            }
+            time(&lastTcasAdjust);
+            lastSquawkPush = 0;
             lastSquawkAdjust = 0;
+            squawkSetSel = 0;
+        }
+    }
+    else if (lastTcasAdjust != 0) {
+        if (now - lastTcasAdjust > 2) {
+            lastTcasAdjust = 0;
         }
     }
 }
@@ -682,7 +758,9 @@ void radio::gpioSpoilersInput()
         prevSpoilersDownToggle = val;
         if (val == 1) {
             // Switch pressed
-            globals.simVars->write(KEY_SPOILERS_ON);
+            //globals.simVars->write(KEY_SPOILERS_ON);
+            globals.simVars->write(KEY_SPOILERS_ARM_SET, 0);
+            globals.simVars->write(KEY_SPOILERS_SET, 16384);
             lastSpoilersPos = 3;
             if (spoilersVal != INT_MIN) {
                 spoilersDownVal = spoilersVal;    // Re-calibrate spoilers values
@@ -701,11 +779,11 @@ void radio::gpioSpoilersInput()
         int spoilersPos = (spoilersVal + (onePos / 2.0) - spoilersAutoVal) / onePos;
         if (spoilersPos != lastSpoilersPos) {
             lastSpoilersPos = spoilersPos;
-            // Set spoilers to retracted or half
+            // 0 = Auto, 1 = retracted, 2 = half, 3 = full
             switch (spoilersPos) {
             case 1:
                 globals.simVars->write(KEY_SPOILERS_ARM_SET, 0);
-                globals.simVars->write(KEY_SPOILERS_OFF);
+                globals.simVars->write(KEY_SPOILERS_OFF);  
                 break;
             case 2:
                 globals.simVars->write(KEY_SPOILERS_ARM_SET, 0);

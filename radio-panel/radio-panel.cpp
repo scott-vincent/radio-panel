@@ -13,7 +13,7 @@
 #include "simvars.h"
 #include "radio.h"
 
-const char* radioVersion = "v1.3.0";
+const char* radioVersion = "v1.3.1";
 const bool Debug = false;
 
 struct globalVars globals;
@@ -47,6 +47,9 @@ void updateCommon()
         // have external power, APU or main engines running.
         globals.electrics = globals.connected && (simVars->dcVolts > 25.4 ||
             (simVars->elecBat1 > 0 && simVars->elecBat2 > 0));
+    }
+    else if (globals.aircraft == AIRBUS_A310) {
+        globals.electrics = globals.connected && simVars->batteryLoad < 0;
     }
     else {
         globals.electrics = globals.connected && simVars->dcVolts > 0;
