@@ -1,6 +1,6 @@
 /*
  * Flight Simulator Radio Panel
- * Copyright (c) 2022 Scott Vincent
+ * Copyright (c) 2023 Scott Vincent
  */
 
 #include <stdio.h>
@@ -13,7 +13,7 @@
 #include "simvars.h"
 #include "radio.h"
 
-const char* radioVersion = "v1.3.2";
+const char* radioVersion = "v1.3.3";
 const bool Debug = false;
 
 struct globalVars globals;
