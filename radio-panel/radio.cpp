@@ -22,7 +22,7 @@ void radio::blankDisplays()
 
 void radio::render()
 {
-    if (!globals.electrics) {
+    if (!globals.electrics || (!airliner && simVars->com1Volume == 0 && simVars->com2Volume == 0)) {
         // Turn off 7-segment displays
         blankDisplays();
 
@@ -31,8 +31,10 @@ void radio::render()
         globals.gpioCtrl->writeLed(navControl, false);
         globals.gpioCtrl->writeLed(seatBeltsControl, false);
 
-        // Make sure settings get re-initialised
-        loadedAircraft = UNDEFINED;
+        if (!globals.electrics) {
+            // Make sure settings get re-initialised
+            loadedAircraft = UNDEFINED;
+        }
 
         return;
     }
@@ -191,6 +193,7 @@ void radio::update()
     bool aircraftChanged = (globals.electrics && loadedAircraft != globals.aircraft);
     if (aircraftChanged) {
         loadedAircraft = globals.aircraft;
+        airliner = (loadedAircraft != NO_AIRCRAFT && simVars->cruiseSpeed >= 300);
         lastFreqAdjust = 0;
         lastSquawkAdjust = 0;
         squawk = 0;

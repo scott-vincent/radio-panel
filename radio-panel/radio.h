@@ -9,6 +9,7 @@ class radio
 private:
     SimVars* simVars;
     Aircraft loadedAircraft = UNDEFINED;
+    bool airliner = false;
     sevensegment* sevenSegment;
 
     unsigned char display1[8];
