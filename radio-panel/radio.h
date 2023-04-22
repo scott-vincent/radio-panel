@@ -50,7 +50,6 @@ private:
     int seatBeltsControl = -1;
 
     int prevFreqWholeVal = 0;
-    int prevFreqWholePush = 0;
     int prevFreqFracVal = 0;
     int prevFreqFracPush = 0;
     int fracSetSel = 0;
@@ -67,7 +66,6 @@ private:
     int prevGearDownToggle = -1;
 
     time_t lastFreqAdjust = 0;
-    time_t lastWholePush = 0;
     time_t lastFreqPush = 0;
     time_t lastSquawkAdjust = 0;
     time_t lastSquawkPush = 0;
