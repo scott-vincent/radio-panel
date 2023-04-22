@@ -91,7 +91,7 @@ void radio::render()
         if (loadedAircraft == AIRBUS_A310 && tcasMode == 0) {
             sevenSegment->dimDisplay(1, true);
         }
-        else if (loadedAircraft == FBW_A320 && transponderState == 0) {
+        else if ((loadedAircraft == FBW_A320 || loadedAircraft == CESSNA_152) && transponderState == 0) {
             sevenSegment->dimDisplay(1, true);
         }
         else {
@@ -443,7 +443,7 @@ void radio::gpioFreqFracInput()
     if (val != INT_MIN) {
         if (prevFreqFracPush % 2 == 1) {
             if (usingNav == 2) {
-                // Short press switches between 10s, units and tenths ADF increments
+                // Short press switches ADF between 10s, units and tenths increments
                 if (fracSetSel == 2) {
                     fracSetSel = 0;
                 }
@@ -451,8 +451,19 @@ void radio::gpioFreqFracInput()
                     fracSetSel++;
                 }
             }
+            else if (showNav) {
+                // Short press switches NAV audio (morse code) on or off
+                audioNav1 = 1 - audioNav1;
+                if (usingNav == 0) {
+                    globals.simVars->write(KEY_RADIO_VOR1_IDENT_SET, audioNav1);
+                }
+                else {
+                    audioNav2 = 1 - audioNav2;
+                    globals.simVars->write(KEY_RADIO_VOR2_IDENT_SET, audioNav2);
+                }
+            }
             else {
-                // Short press switches between 10s and 100ths frequency increments
+                // Short press switches COM between 10s and 100ths frequency increments
                 if (fracSetSel == 1) {
                     fracSetSel = 0;
                 }
@@ -689,6 +700,16 @@ void radio::gpioSquawkInput()
             else if (loadedAircraft == FBW_A320) {
                 // Long press switches transponder state between Standby and Auto
                 transponderState = 1 - transponderState;
+                globals.simVars->write(KEY_XPNDR_STATE, transponderState);
+            }
+            else if (loadedAircraft == CESSNA_152) {
+                // Long press switches transponder state between Off and Alt
+                if (transponderState == 4) {
+                    transponderState = 0;
+                }
+                else {
+                    transponderState = 4;
+                }
                 globals.simVars->write(KEY_XPNDR_STATE, transponderState);
             }
             time(&lastTcasAdjust);
