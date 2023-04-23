@@ -33,6 +33,7 @@ private:
     int receiveAllHideDelay = 0;
     int audioNav1 = 0;
     int audioNav2 = 0;
+    int audioAdf = 0;
 
     // Hardware controls
     int freqWholeControl = -1;
