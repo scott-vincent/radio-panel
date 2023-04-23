@@ -451,6 +451,7 @@ void radio::gpioFreqFracInput()
                     fracSetSel++;
                 }
                 // Short press also switches ADF audio (morse code) on or off
+                audioAdf = 1 - audioAdf;
                 globals.simVars->write(KEY_RADIO_ADF_IDENT_SET, audioAdf);
             }
             else if (showNav) {
