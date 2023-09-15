@@ -22,7 +22,7 @@ void radio::blankDisplays()
 
 void radio::render()
 {
-    if (!globals.electrics || (!airliner && simVars->com1Volume == 0 && simVars->com2Volume == 0)) {
+    if (!globals.electrics || (loadedAircraft == CESSNA_152 && simVars->com1Volume == 0 && simVars->com2Volume == 0)) {
         // Turn off 7-segment displays
         blankDisplays();
 
@@ -91,7 +91,11 @@ void radio::render()
         if (loadedAircraft == AIRBUS_A310 && tcasMode == 0) {
             sevenSegment->dimDisplay(1, true);
         }
-        else if ((loadedAircraft == FBW_A320 || loadedAircraft == CESSNA_152) && transponderState == 0) {
+        else if ((loadedAircraft == FBW_A320) && transponderState == 0) {
+            sevenSegment->dimDisplay(1, true);
+        }
+        else if (!airliner && transponderState < 3) {
+            // States 0, 1 and 2 are not on (off, stby, tst)
             sevenSegment->dimDisplay(1, true);
         }
         else {
@@ -167,10 +171,12 @@ void radio::writeNav(unsigned char* display, double freq)
 /// so leave two blank on left and one on right.
 /// Leading 0 is also shown as a blank.
 /// </summary>
-void radio::writeAdf(unsigned char* display, int freq)
+void radio::writeAdf(unsigned char* display, double freq)
 {
     int freq1000 = freq / 100;
-    int freq100 = freq % 100;
+    int freq100 = int(freq) % 100;
+    int freqX10 = (freq + 0.01) * 10;
+    int frac = freqX10 % 10;
 
     if (freq1000 > 9) {
         sevenSegment->blankSegData(display, 2, false);
@@ -183,7 +189,7 @@ void radio::writeAdf(unsigned char* display, int freq)
 
     sevenSegment->getSegData(&display[4], 2, freq100, 2);
     sevenSegment->decimalSegData(display, 5);
-    sevenSegment->getSegData(&display[6], 1, 0, 1);
+    sevenSegment->getSegData(&display[6], 1, frac, 1);
     sevenSegment->blankSegData(&display[7], 1, false);
 }
 
@@ -195,7 +201,9 @@ void radio::update()
         loadedAircraft = globals.aircraft;
         airliner = (loadedAircraft != NO_AIRCRAFT && simVars->cruiseSpeed >= 300);
         lastFreqAdjust = 0;
+        lastFreqPush = 0;
         lastSquawkAdjust = 0;
+        lastSquawkPush = 0;
         squawk = 0;
         tcasMode = -1;
         transponderState = -1;
@@ -206,6 +214,14 @@ void radio::update()
         prevSpoilersDownToggle = -1;
         prevGearUpToggle = -1;
         prevGearDownToggle = -1;
+        prevFreqWholeValSb = simVars->sbEncoder[1];
+        prevFreqFracValSb = simVars->sbEncoder[0];
+        prevFreqFracPushSb = simVars->sbButton[0];
+        prevSquawkValSb = simVars->sbEncoder[3];
+        prevSquawkPushSb = simVars->sbButton[3];
+        prevSwapPushSb = simVars->sbButton[6];
+        prevComPushSb = simVars->sbButton[5];
+        prevNavPushSb = simVars->sbButton[4];
 
         // Set COM2 to GUARD frequency and receive on ALL (needed for POSCON)
         standbyFreq = 121.5;
@@ -253,7 +269,13 @@ void radio::update()
             // Using ADF
             activeFreq = simVars->adfFreq;
             if (lastFreqAdjust == 0) {
-                standbyFreq = simVars->adfStandby;
+                if (loadedAircraft == CESSNA_152) {
+                    // Cessna 152 doesn't have ADF standby
+                    standbyFreq = activeFreq;
+                }
+                else {
+                    standbyFreq = simVars->adfStandby;
+                }
             }
             break;
         }
@@ -315,8 +337,22 @@ void radio::gpioFreqWholeInput()
 {
     // Frequency whole rotate
     int val = globals.gpioCtrl->readRotation(freqWholeControl);
+    int diff = (val - prevFreqWholeVal) / 2;
+    bool switchBox = false;
+
+    if (simVars->sbMode != 2) {
+        prevFreqWholeValSb = simVars->sbEncoder[1];
+    }
+    else if (simVars->sbEncoder[1] != prevFreqWholeValSb) {
+        val = simVars->sbEncoder[1];
+        diff = val - prevFreqWholeValSb;
+        if (diff == 0) {
+            val = INT_MIN;
+        }
+        switchBox = true;
+    }
+
     if (val != INT_MIN) {
-        int diff = (val - prevFreqWholeVal) / 4;
         int adjust = 0;
         if (diff > 0) {
             adjust = 1;
@@ -351,6 +387,10 @@ void radio::gpioFreqWholeInput()
                 {
                     double newVal = adjustAdf(standbyFreq, adjust, -1);
                     globals.simVars->write(KEY_ADF_STBY_SET, newVal);
+                    if (loadedAircraft == CESSNA_152) {
+                        // Cessna 152 doesn't have standby ADF so make it active immediately
+                        globals.simVars->write(KEY_ADF1_RADIO_SWAP);
+                    }
                     break;
                 }
                 }
@@ -365,7 +405,12 @@ void radio::gpioFreqWholeInput()
                 double newVal = adjustComWhole(adjust);
                 globals.simVars->write(KEY_COM2_STBY_RADIO_SET, newVal);
             }
-            prevFreqWholeVal = val;
+            if (switchBox) {
+                prevFreqWholeValSb = val;
+            }
+            else {
+                prevFreqWholeVal = val;
+            }
         }
         fracSetSel = 0;
         time(&lastFreqAdjust);      // Gets reset by frac input
@@ -376,8 +421,22 @@ void radio::gpioFreqFracInput()
 {
     // Frequency fraction rotate
     int val = globals.gpioCtrl->readRotation(freqFracControl);
+    int diff = (val - prevFreqFracVal) / 2;
+    bool switchBox = false;
+
+    if (simVars->sbMode != 2) {
+        prevFreqFracValSb = simVars->sbEncoder[0];
+    }
+    else if (simVars->sbEncoder[0] != prevFreqFracValSb) {
+        val = simVars->sbEncoder[0];
+        diff = (val - prevFreqFracValSb);
+        if (diff == 0) {
+            val = INT_MIN;
+        }
+        switchBox = true;
+    }
+
     if (val != INT_MIN) {
-        int diff = (val - prevFreqFracVal) / 4;
         int adjust = 0;
         if (diff > 0) {
             adjust = 1;
@@ -412,6 +471,10 @@ void radio::gpioFreqFracInput()
                 {
                     double newVal = adjustAdf(standbyFreq, adjust, fracSetSel);
                     globals.simVars->write(KEY_ADF_STBY_SET, newVal);
+                    if (loadedAircraft == CESSNA_152) {
+                        // Cessna 152 doesn't have standby ADF so make it active immediately
+                        globals.simVars->write(KEY_ADF1_RADIO_SWAP);
+                    }
                     break;
                 }
                 }
@@ -426,7 +489,12 @@ void radio::gpioFreqFracInput()
                 double newVal = adjustComFrac(adjust);
                 globals.simVars->write(KEY_COM2_STBY_RADIO_SET, newVal);
             }
-            prevFreqFracVal = val;
+            if (switchBox) {
+                prevFreqFracValSb = val;
+            }
+            else {
+                prevFreqFracVal = val;
+            }
         }
         time(&lastFreqAdjust);
     }
@@ -440,16 +508,29 @@ void radio::gpioFreqFracInput()
 
     // Frequency fraction push
     val = globals.gpioCtrl->readPush(freqFracControl);
+    int prevVal = prevFreqFracPush;
+    switchBox = false;
+
+    if (simVars->sbMode != 2 || prevFreqFracPushSb == 0) {
+        prevFreqFracPushSb = simVars->sbButton[0];
+    }
+    else if (simVars->sbButton[0] != prevFreqFracPushSb) {
+        val = simVars->sbButton[0];
+        prevVal = prevFreqFracPushSb;
+        switchBox = true;
+    }
+
     if (val != INT_MIN) {
-        if (prevFreqFracPush % 2 == 1) {
+        if (prevVal % 2 == 1) {
             if (usingNav == 2) {
-                // Short press switches ADF between 10s, units and tenths increments
+                // Short press switches ADF between 10s, units and half increments
                 if (fracSetSel == 2) {
                     fracSetSel = 0;
                 }
                 else {
                     fracSetSel++;
                 }
+                time(&lastFreqAdjust);
                 // Short press also switches ADF audio (morse code) on or off
                 audioAdf = 1 - audioAdf;
                 globals.simVars->write(KEY_RADIO_ADF_IDENT_SET, audioAdf);
@@ -481,7 +562,12 @@ void radio::gpioFreqFracInput()
             // Released
             lastFreqPush = 0;
         }
-        prevFreqFracPush = val;
+        if (switchBox) {
+            prevFreqFracPushSb = val;
+        }
+        else {
+            prevFreqFracPush = val;
+        }
         time(&lastFreqAdjust);
     }
 
@@ -494,14 +580,14 @@ void radio::gpioFreqFracInput()
             if (simVars->com1Receive && simVars->com2Receive) {
                 newVal = 0;
             }
-            if (simVars->com1Transmit == 1) {
-                globals.simVars->write(KEY_COM1_RECEIVE_SELECT, 1);
-                globals.simVars->write(KEY_COM2_RECEIVE_SELECT, newVal);
-            }
-            else {
-                globals.simVars->write(KEY_COM2_RECEIVE_SELECT, 1);
-                globals.simVars->write(KEY_COM1_RECEIVE_SELECT, newVal);
-            }
+            //if (simVars->com1Transmit == 1) {
+            //    globals.simVars->write(KEY_COM1_RECEIVE_SELECT, 1);
+            //    globals.simVars->write(KEY_COM2_RECEIVE_SELECT, newVal);
+            //}
+            //else {
+            //    globals.simVars->write(KEY_COM2_RECEIVE_SELECT, 1);
+            //    globals.simVars->write(KEY_COM1_RECEIVE_SELECT, newVal);
+            //}
             lastFreqPush = 0;
         }
     }
@@ -511,8 +597,20 @@ void radio::gpioButtonsInput()
 {
     // Swap push
     int val = globals.gpioCtrl->readPush(swapControl);
+    int prevVal = prevSwapPush;
+    int switchBox = false;
+
+    if (simVars->sbMode != 2 || prevSwapPushSb == 0) {
+        prevSwapPushSb = simVars->sbButton[6];
+    }
+    else if (simVars->sbButton[6] != prevSwapPushSb) {
+        val = simVars->sbButton[6];
+        prevVal = prevSwapPushSb;
+        switchBox = true;
+    }
+
     if (val != INT_MIN) {
-        if (prevSwapPush % 2 == 1) {
+        if (prevVal % 2 == 1) {
             // Swap active and standby frequencies
             if (showNav) {
                 switch (usingNav) {
@@ -523,7 +621,10 @@ void radio::gpioButtonsInput()
                     globals.simVars->write(KEY_NAV2_RADIO_SWAP);
                     break;
                 case 2:
-                    globals.simVars->write(KEY_ADF1_RADIO_SWAP);
+                    // Cessna 152 doesn't have standby ADF
+                    if (loadedAircraft != CESSNA_152) {
+                        globals.simVars->write(KEY_ADF1_RADIO_SWAP);
+                    }
                     break;
                 }
             }
@@ -537,13 +638,30 @@ void radio::gpioButtonsInput()
             }
             lastFreqAdjust = 0;
         }
-        prevSwapPush = val;
+        if (switchBox) {
+            prevSwapPushSb = val;
+        }
+        else {
+            prevSwapPush = val;
+        }
     }
 
     // Com push
     val = globals.gpioCtrl->readPush(comControl);
+    prevVal = prevComPush;
+    switchBox = false;
+
+    if (simVars->sbMode != 2 || prevComPushSb == 0) {
+        prevComPushSb = simVars->sbButton[5];
+    }
+    else if (simVars->sbButton[5] != prevComPushSb) {
+        val = simVars->sbButton[5];
+        prevVal = prevComPushSb;
+        switchBox = true;
+    }
+
     if (val != INT_MIN) {
-        if (prevComPush % 2 == 1) {
+        if (prevVal % 2 == 1) {
             // If showing NAV, show COM1
             if (showNav) {
                 showNav = false;
@@ -573,13 +691,30 @@ void radio::gpioButtonsInput()
         }
         fracSetSel = 0;
         lastFreqAdjust = 0;
-        prevComPush = val;
+        if (switchBox) {
+            prevComPushSb = val;
+        }
+        else {
+            prevComPush = val;
+        }
     }
 
     // Nav push
     val = globals.gpioCtrl->readPush(navControl);
+    prevVal = prevNavPush;
+    switchBox = false;
+
+    if (simVars->sbMode != 2 || prevNavPushSb == 0) {
+        prevNavPushSb = simVars->sbButton[4];
+    }
+    else if (simVars->sbButton[4] != prevNavPushSb) {
+        val = simVars->sbButton[4];
+        prevVal = prevNavPushSb;
+        switchBox = true;
+    }
+
     if (val != INT_MIN) {
-        if (prevNavPush % 2 == 1) {
+        if (prevVal % 2 == 1) {
             // If showing COM, show NAV1
             if (!showNav) {
                 showNav = true;
@@ -611,7 +746,12 @@ void radio::gpioButtonsInput()
         }
         fracSetSel = 0;
         lastFreqAdjust = 0;
-        prevNavPush = val;
+        if (switchBox) {
+            prevNavPushSb = val;
+        }
+        else {
+            prevNavPush = val;
+        }
     }
 }
 
@@ -619,8 +759,22 @@ void radio::gpioSquawkInput()
 {
     // Squawk rotate
     int val = globals.gpioCtrl->readRotation(squawkControl);
+    int diff = (val - prevSquawkVal) / 2;
+    bool switchBox = false;
+
+    if (simVars->sbMode != 2) {
+        prevSquawkValSb = simVars->sbEncoder[3];
+    }
+    else if (simVars->sbEncoder[3] != prevSquawkValSb) {
+        val = simVars->sbEncoder[3];
+        diff = val - prevSquawkValSb;
+        if (diff == 0) {
+            val = INT_MIN;
+        }
+        switchBox = true;
+    }
+
     if (val != INT_MIN) {
-        int diff = (val - prevSquawkVal) / 4;
         int adjust = 0;
         if (diff > 0) {
             adjust = 1;
@@ -643,7 +797,12 @@ void radio::gpioSquawkInput()
             else {
                 globals.simVars->write(KEY_XPNDR_SET, newVal);
             }
-            prevSquawkVal = val;
+            if (switchBox) {
+                prevSquawkValSb = val;
+            }
+            else {
+                prevSquawkVal = val;
+            }
         }
         time(&lastSquawkAdjust);
     }
@@ -657,8 +816,20 @@ void radio::gpioSquawkInput()
 
     // Squawk push
     val = globals.gpioCtrl->readPush(squawkControl);
+    int prevVal = prevSquawkPush;
+    switchBox = false;
+
+    if (simVars->sbMode != 2 || prevSquawkPushSb == 0) {
+        prevSquawkPushSb = simVars->sbButton[3];
+    }
+    else if (simVars->sbButton[3] != prevSquawkPushSb) {
+        val = simVars->sbButton[3];
+        prevVal = prevSquawkPushSb;
+        switchBox = true;
+    }
+
     if (val != INT_MIN) {
-        if (prevSquawkPush % 2 == 1) {
+        if (prevVal % 2 == 1) {
             // Short press switches to next digit
             if (loadedAircraft == AIRBUS_A310) {
                 // Want sel to be 0 or 2
@@ -677,7 +848,12 @@ void radio::gpioSquawkInput()
             // Released
             lastSquawkPush = 0;
         }
-        prevSquawkPush = val;
+        if (switchBox) {
+            prevSquawkPushSb = val;
+        }
+        else {
+            prevSquawkPush = val;
+        }
     }
     else if (lastSquawkAdjust != 0) {
         // Reset digit set selection if more than 2 seconds since last adjustment
@@ -705,7 +881,7 @@ void radio::gpioSquawkInput()
                 transponderState = 1 - transponderState;
                 globals.simVars->write(KEY_XPNDR_STATE, transponderState);
             }
-            else if (loadedAircraft == CESSNA_152) {
+            else if (!airliner) {
                 // Long press switches transponder state between Off and Alt
                 if (transponderState == 4) {
                     transponderState = 0;
@@ -888,35 +1064,54 @@ double radio::adjustComFrac(int adjust)
     int frac2 = thousandths % 100;
 
     if (fracSetSel == 0) {
+        // Adjust 10ths, 100ths and 1000ths
+        // 25 KHz spacing uses .000, .025, 0.050 and 0.075
+        // 8.33 KHz spacing uses 0.005, 0.010, 0.015, 0.030, 0.035, 0.040, 0.055, 0.060, 0.065, 0.080, 0.085 and 0.090
+        // So we can Skip .020, .045, .070 and .095
+        frac2 += adjust * 5;
+        if (adjust > 0) {
+            if (frac2 > 90) {
+                frac2 = 0;
+                if (frac1 == 9) {
+                    frac1 = 0;
+                }
+                else {
+                    frac1++;
+                }
+            }
+            switch (frac2) {
+                case 20: frac2 = 25; break;
+                case 45: frac2 = 50; break;
+                case 70: frac2 = 75; break;
+            }
+        }
+        else if (adjust < 0) {
+            if (frac2 < 0) {
+                frac2 = 90;
+                if (frac1 == 0) {
+                    frac1 = 9;
+                }
+                else {
+                    frac1--;
+                }
+            }
+            switch (frac2) {
+                case 20: frac2 = 15; break;
+                case 45: frac2 = 40; break;
+                case 70: frac2 = 65; break;
+                case 95: frac2 = 90; break;
+            }
+        }
+    }
+    else {
         // Adjust 10ths
         frac1 += adjust;
+
         if (frac1 > 9) {
             frac1 = 0;
         }
         else if (frac1 < 0) {
             frac1 = 9;
-        }
-    }
-    else {
-        // Adjust 100ths and 1000ths
-        frac2 += adjust * 5;
-
-        if (frac2 >= 100) {
-            frac2 = 0;
-        }
-        else if (frac2 < 0) {
-            frac2 = 90;
-        }
-
-        // Skip .020, .045, .070 and .095
-        if (frac2 == 95) {
-            frac2 += adjust * 5;
-            if (frac2 >= 100) {
-                frac2 = 0;
-            }
-        }
-        else if (frac2 == 20 || frac2 == 45 || frac2 == 70) {
-            frac2 += adjust * 5;
         }
     }
 
@@ -1023,11 +1218,11 @@ int radio::adjustAdf(double val, int adjust, int setSel)
         digit4 = adjustDigit(digit4, adjust);
     }
     else {
-        // Adjust 5th digit
-        digit5 = adjustDigit(digit5, adjust);
+        // Adjust 5th digit (must be 0 or 5)
+        digit5 = adjustHalfDigit(digit5, adjust);
     }
 
-    standbyFreq = highDigits * 100 + digit3 * 10 + digit4 + digit5 / 10;
+    standbyFreq = highDigits * 100 + digit3 * 10 + digit4 + digit5 / 10.0;
 
     // Convert to BCD
     int digit1 = highDigits / 10;
@@ -1044,6 +1239,20 @@ int radio::adjustDigit(int val, int adjust)
     }
     else if (val < 0) {
         val = 9;
+    }
+
+    return val;
+}
+
+int radio::adjustHalfDigit(int val, int adjust)
+{
+    if (adjust != 0) {
+        if (val >= 5) {
+            val = 0;
+        }
+        else {
+            val = 5;
+        }
     }
 
     return val;

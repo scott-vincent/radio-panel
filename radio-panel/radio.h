@@ -49,6 +49,7 @@ private:
     int gearUpControl = -1;
     int gearDownControl = -1;
     int seatBeltsControl = -1;
+    int delayedAdfSwap = 0;
 
     int prevFreqWholeVal = 0;
     int prevFreqFracVal = 0;
@@ -65,6 +66,14 @@ private:
     int prevSpoilersDownToggle = -1;
     int prevGearUpToggle = -1;
     int prevGearDownToggle = -1;
+    int prevFreqWholeValSb;
+    int prevFreqFracValSb;
+    int prevFreqFracPushSb;
+    int prevSwapPushSb = 0;
+    int prevComPushSb = 0;
+    int prevNavPushSb = 0;
+    int prevSquawkValSb = 0;
+    int prevSquawkPushSb = 0;
 
     time_t lastFreqAdjust = 0;
     time_t lastFreqPush = 0;
@@ -82,7 +91,7 @@ private:
     void blankDisplays();
     void writeCom(unsigned char* display, double freq);
     void writeNav(unsigned char* display, double freq);
-    void writeAdf(unsigned char* display, int freq);
+    void writeAdf(unsigned char* display, double freq);
     void addGpio();
     void gpioFreqWholeInput();
     void gpioFreqFracInput();
@@ -97,6 +106,7 @@ private:
     double adjustNavFrac(int adjust);
     int adjustAdf(double val, int adjust, int setSel);
     int adjustDigit(int val, int adjust);
+    int adjustHalfDigit(int val, int adjust);
     int adjustSquawk(int adjust);
     int adjustSquawkDigit(int val, int adjust);
 };
