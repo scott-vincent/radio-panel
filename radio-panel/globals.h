@@ -20,6 +20,7 @@ enum Aircraft {
     FBW_A320,
     BOEING_747,
     SUPERMARINE_SPITFIRE,
+    JUSTFLIGHT_PA28,
     OTHER_AIRCRAFT,
     OTHER_AIRCRAFT2,
 };
@@ -50,6 +51,9 @@ struct globalVars
     const int Salty_Boeing_747_Len = 16;
     const char* Supermarine_Spitfire_Text = "FlyingIron Spitfire";
     const int Supermarine_Spitfire_Len = 19;
+    const char* JustFlight_PA28_Text = "Just Flight PA28";
+    const int JustFlight_PA28_Len = 16;
+
     const int FastAircraftSpeed = 195;
 
     const char* BitmapDir = "bitmaps/";

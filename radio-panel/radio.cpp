@@ -915,10 +915,16 @@ void radio::gpioTrimWheelInput()
         while (adjust != 0) {
             if (adjust > 0) {
                 globals.simVars->write(KEY_ELEV_TRIM_UP);
+                if (globals.aircraft == JUSTFLIGHT_PA28) {
+                    globals.simVars->write(KEY_ELEV_TRIM_UP);
+                }
                 adjust--;
             }
             else {
                 globals.simVars->write(KEY_ELEV_TRIM_DN);
+                if (globals.aircraft == JUSTFLIGHT_PA28) {
+                    globals.simVars->write(KEY_ELEV_TRIM_DN);
+                }
                 adjust++;
             }
         }
@@ -1064,7 +1070,18 @@ double radio::adjustComFrac(int adjust)
     int frac2 = thousandths % 100;
 
     if (fracSetSel == 0) {
-        // Adjust 10ths, 100ths and 1000ths
+        // Adjust 10ths
+        frac1 += adjust;
+
+        if (frac1 > 9) {
+            frac1 = 0;
+        }
+        else if (frac1 < 0) {
+            frac1 = 9;
+        }
+    }
+    else {
+        // Adjust 100ths and 1000ths (rollover 10ths)
         // 25 KHz spacing uses .000, .025, 0.050 and 0.075
         // 8.33 KHz spacing uses 0.005, 0.010, 0.015, 0.030, 0.035, 0.040, 0.055, 0.060, 0.065, 0.080, 0.085 and 0.090
         // So we can Skip .020, .045, .070 and .095
@@ -1101,17 +1118,6 @@ double radio::adjustComFrac(int adjust)
                 case 70: frac2 = 65; break;
                 case 95: frac2 = 90; break;
             }
-        }
-    }
-    else {
-        // Adjust 10ths
-        frac1 += adjust;
-
-        if (frac1 > 9) {
-            frac1 = 0;
-        }
-        else if (frac1 < 0) {
-            frac1 = 9;
         }
     }
 

@@ -13,7 +13,7 @@
 #include "simvars.h"
 #include "radio.h"
 
-const char* radioVersion = "v1.3.7";
+const char* radioVersion = "v1.5.0";
 const bool Debug = false;
 
 struct globalVars globals;

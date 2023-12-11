@@ -46,6 +46,9 @@ void identifyAircraft(char* aircraft)
         else if (strncmp(aircraft, globals.Supermarine_Spitfire_Text, globals.Supermarine_Spitfire_Len) == 0) {
             globals.aircraft = SUPERMARINE_SPITFIRE;
         }
+        else if (strncmp(aircraft, globals.JustFlight_PA28_Text, globals.JustFlight_PA28_Len) == 0) {
+            globals.aircraft = JUSTFLIGHT_PA28;
+        }
         else {
             // Need to flip between other aircraft so that instruments
             // can detect the aircraft has changed.
@@ -63,11 +66,11 @@ void identifyAircraft(char* aircraft)
 /// <summary>
 /// Server can send us a delta rather than full data so we need to unpack it.
 /// </summary>
-void receiveDelta(char *deltaData, long deltaSize, char* simVarsPtr)
+void receiveDelta(char *deltaData, int deltaSize, char* simVarsPtr)
 {
     char* dataPtr = deltaData;
 
-    long tempDeltaSize = deltaSize;
+    int tempDeltaSize = deltaSize;
     while (deltaSize > 0) {
         DeltaDouble* deltaDouble = (DeltaDouble*)dataPtr;
         if (deltaDouble->offset & 0x10000) {
