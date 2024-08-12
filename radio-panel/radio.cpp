@@ -225,7 +225,7 @@ void radio::update()
 
         // Set COM2 to GUARD frequency and receive on ALL (needed for POSCON)
         standbyFreq = 121.5;
-        globals.simVars->write(KEY_COM2_STBY_RADIO_SET, adjustComWhole(0));
+        globals.simVars->write(KEY_COM2_STBY_RADIO_SET_HZ, adjustComWhole(0));
         globals.simVars->write(KEY_COM2_RADIO_SWAP);
         globals.simVars->write(KEY_COM1_TRANSMIT_SELECT);
         globals.simVars->write(KEY_COM1_RECEIVE_SELECT, 1);
@@ -370,17 +370,17 @@ void radio::gpioFreqWholeInput()
                     double newVal = adjustNavWhole(adjust);
                     if (loadedAircraft == AIRBUS_A310) {
                         // A310 uses NAV1 to set ILS frequency
-                        globals.simVars->write(KEY_NAV1_STBY_SET, standbyFreq);
+                        globals.simVars->write(KEY_NAV1_STBY_SET_HZ, standbyFreq);
                     }
                     else {
-                        globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
+                        globals.simVars->write(KEY_NAV1_STBY_SET_HZ, newVal);
                     }
                     break;
                 }
                 case 1:
                 {
                     double newVal = adjustNavWhole(adjust);
-                    globals.simVars->write(KEY_NAV2_STBY_SET, newVal);
+                    globals.simVars->write(KEY_NAV2_STBY_SET_HZ, newVal);
                     break;
                 }
                 case 2:
@@ -398,12 +398,12 @@ void radio::gpioFreqWholeInput()
             else if (simVars->com1Transmit == 1) {
                 // Using COM1
                 double newVal = adjustComWhole(adjust);
-                globals.simVars->write(KEY_COM1_STBY_RADIO_SET, newVal);
+                globals.simVars->write(KEY_COM1_STBY_RADIO_SET_HZ, newVal);
             }
             else {
                 // Using COM2
                 double newVal = adjustComWhole(adjust);
-                globals.simVars->write(KEY_COM2_STBY_RADIO_SET, newVal);
+                globals.simVars->write(KEY_COM2_STBY_RADIO_SET_HZ, newVal);
             }
             if (switchBox) {
                 prevFreqWholeValSb = val;
@@ -454,17 +454,17 @@ void radio::gpioFreqFracInput()
                     double newVal = adjustNavFrac(adjust);
                     if (loadedAircraft == AIRBUS_A310) {
                         // A310 uses NAV1 to set ILS frequency
-                        globals.simVars->write(KEY_NAV1_STBY_SET, standbyFreq);
+                        globals.simVars->write(KEY_NAV1_STBY_SET_HZ, standbyFreq);
                     }
                     else {
-                        globals.simVars->write(KEY_NAV1_STBY_SET, newVal);
+                        globals.simVars->write(KEY_NAV1_STBY_SET_HZ, newVal);
                     }
                     break;
                 }
                 case 1:
                 {
                     double newVal = adjustNavFrac(adjust);
-                    globals.simVars->write(KEY_NAV2_STBY_SET, newVal);
+                    globals.simVars->write(KEY_NAV2_STBY_SET_HZ, newVal);
                     break;
                 }
                 case 2:
@@ -482,12 +482,12 @@ void radio::gpioFreqFracInput()
             else if (simVars->com1Transmit == 1) {
                 // Using COM1
                 double newVal = adjustComFrac(adjust);
-                globals.simVars->write(KEY_COM1_STBY_RADIO_SET, newVal);
+                globals.simVars->write(KEY_COM1_STBY_RADIO_SET_HZ, newVal);
             }
             else {
                 // Using COM2
                 double newVal = adjustComFrac(adjust);
-                globals.simVars->write(KEY_COM2_STBY_RADIO_SET, newVal);
+                globals.simVars->write(KEY_COM2_STBY_RADIO_SET_HZ, newVal);
             }
             if (switchBox) {
                 prevFreqFracValSb = val;
@@ -1049,16 +1049,8 @@ double radio::adjustComWhole(int adjust)
 
     standbyFreq = whole + (thousandths / 1000.0);
 
-    // Convert to BCD
-    int digit1 = whole / 100;
-    int digit2 = (whole % 100) / 10;
-    int digit3 = whole % 10;
-    int digit4 = frac1;
-    int digit5 = frac2 / 10;
-    int digit6 = frac2 % 10;
-
-    // Return digit6 as fraction
-    return 65536 * digit1 + 4096 * digit2 + 256 * digit3 + 16 * digit4 + digit5 + digit6 * 0.1;
+    // Convert to Hz
+    return standbyFreq * 1000000.0;
 }
 
 double radio::adjustComFrac(int adjust)
@@ -1123,21 +1115,8 @@ double radio::adjustComFrac(int adjust)
 
     standbyFreq = whole + (frac1 / 10.0) + (frac2 / 1000.0);
 
-    // Need to set .020 to show .025 and .070 to show .075 !!!
-    if (frac2 == 25 || frac2 == 75) {
-        frac2 -= 5;
-    }
-
-    // Convert to BCD
-    int digit1 = whole / 100;
-    int digit2 = (whole % 100) / 10;
-    int digit3 = whole % 10;
-    int digit4 = frac1;
-    int digit5 = frac2 / 10;
-    int digit6 = frac2 % 10;
-
-    // Return digit6 as fraction
-    return 65536 * digit1 + 4096 * digit2 + 256 * digit3 + 16 * digit4 + digit5 + digit6 * 0.1;
+    // Convert to Hz
+    return standbyFreq * 1000000.0;
 }
 
 double radio::adjustNavWhole(int adjust)
@@ -1157,14 +1136,8 @@ double radio::adjustNavWhole(int adjust)
 
     standbyFreq = whole + (frac / 100.0);
 
-    // Convert to BCD
-    int digit1 = whole / 100;
-    int digit2 = (whole % 100) / 10;
-    int digit3 = whole % 10;
-    int digit4 = frac / 10;
-    int digit5 = frac % 10;
-
-    return 65536 * digit1 + 4096 * digit2 + 256 * digit3 + 16 * digit4 + digit5;
+    // Convert to Hz
+    return standbyFreq * 1000000.0;
 }
 
 double radio::adjustNavFrac(int adjust)
@@ -1185,14 +1158,8 @@ double radio::adjustNavFrac(int adjust)
 
     standbyFreq = whole + (frac / 100.0);
 
-    // Convert to BCD
-    int digit1 = whole / 100;
-    int digit2 = (whole % 100) / 10;
-    int digit3 = whole % 10;
-    int digit4 = frac / 10;
-    int digit5 = frac % 10;
-
-    return 65536 * digit1 + 4096 * digit2 + 256 * digit3 + 16 * digit4 + digit5;
+    // Convert to Hz
+    return standbyFreq * 1000000.0;
 }
 
 int radio::adjustAdf(double val, int adjust, int setSel)
