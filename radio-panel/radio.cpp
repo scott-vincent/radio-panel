@@ -223,7 +223,7 @@ void radio::update()
         prevComPushSb = simVars->sbButton[5];
         prevNavPushSb = simVars->sbButton[4];
 
-        // Set COM2 to GUARD frequency and receive on ALL (needed for POSCON)
+        // Set COM2 to GUARD frequency
         standbyFreq = 121.5;
         globals.simVars->write(KEY_COM2_STBY_RADIO_SET_HZ, adjustComWhole(0));
         globals.simVars->write(KEY_COM2_RADIO_SWAP);
@@ -580,14 +580,14 @@ void radio::gpioFreqFracInput()
             if (simVars->com1Receive && simVars->com2Receive) {
                 newVal = 0;
             }
-            //if (simVars->com1Transmit == 1) {
-            //    globals.simVars->write(KEY_COM1_RECEIVE_SELECT, 1);
-            //    globals.simVars->write(KEY_COM2_RECEIVE_SELECT, newVal);
-            //}
-            //else {
-            //    globals.simVars->write(KEY_COM2_RECEIVE_SELECT, 1);
-            //    globals.simVars->write(KEY_COM1_RECEIVE_SELECT, newVal);
-            //}
+            if (simVars->com1Transmit == 1) {
+                globals.simVars->write(KEY_COM1_RECEIVE_SELECT, 1);
+                globals.simVars->write(KEY_COM2_RECEIVE_SELECT, newVal);
+            }
+            else {
+                globals.simVars->write(KEY_COM2_RECEIVE_SELECT, 1);
+                globals.simVars->write(KEY_COM1_RECEIVE_SELECT, newVal);
+            }
             lastFreqPush = 0;
         }
     }
@@ -636,6 +636,7 @@ void radio::gpioButtonsInput()
                 // Using COM2
                 globals.simVars->write(KEY_COM2_RADIO_SWAP);
             }
+            receiveAllHideDelay = 60;
             lastFreqAdjust = 0;
         }
         if (switchBox) {
