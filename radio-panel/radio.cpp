@@ -91,7 +91,7 @@ void radio::render()
         if (loadedAircraft == AIRBUS_A310 && tcasMode == 0) {
             sevenSegment->dimDisplay(1, true);
         }
-        else if ((loadedAircraft == FBW_A320) && transponderState == 0) {
+        else if ((loadedAircraft == FBW) && transponderState == 0) {
             sevenSegment->dimDisplay(1, true);
         }
         else if (!airliner && transponderState < 3) {
@@ -877,7 +877,7 @@ void radio::gpioSquawkInput()
                 }
                 globals.simVars->write(KEY_XPNDR_STATE, tcasMode);
             }
-            else if (loadedAircraft == FBW_A320) {
+            else if (loadedAircraft == FBW) {
                 // Long press switches transponder state between Standby and Auto
                 transponderState = 1 - transponderState;
                 globals.simVars->write(KEY_XPNDR_STATE, transponderState);
