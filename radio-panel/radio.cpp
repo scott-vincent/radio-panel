@@ -3,6 +3,8 @@
 #include "gpioctrl.h"
 #include "radio.h"
 
+int saveVal;
+
 radio::radio()
 {
     simVars = &globals.simVars->simVars;
@@ -797,6 +799,7 @@ void radio::gpioSquawkInput()
             }
             else {
                 globals.simVars->write(KEY_XPNDR_SET, newVal);
+                printf("New squawk = %d\n", newVal);
             }
             if (switchBox) {
                 prevSquawkValSb = val;
@@ -1260,6 +1263,7 @@ int radio::adjustSquawk(int adjust)
 
     // Convert to BCD
     squawk = digit1 * 4096 + digit2 * 256 + digit3 * 16 + digit4;
+    printf("squawk %d%d%d%d = %d\n", digit1, digit2, digit3, digit4, squawk);
     return squawk;
 }
 
